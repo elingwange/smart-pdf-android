@@ -1,5 +1,5 @@
+package com.quantumstudio.smartpdf.pdf.data
 
-import com.quantumstudio.smartpdf.pdf.PdfFile
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import java.io.File
 

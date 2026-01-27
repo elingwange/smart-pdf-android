@@ -1,6 +1,5 @@
-package com.quantumstudio.smartpdf.pdf
+package com.quantumstudio.smartpdf.pdf.data
 
-import PdfMetadataExtractor
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
