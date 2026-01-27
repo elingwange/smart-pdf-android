@@ -64,4 +64,7 @@ dependencies {
     implementation("androidx.room:room-runtime:2.5.2")
     kapt("androidx.room:room-compiler:2.5.2")
     implementation("androidx.room:room-ktx:2.5.2")
+    // pdf 解析
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+
 }
