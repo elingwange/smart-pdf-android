@@ -1,6 +1,5 @@
 package com.quantumstudio.smartpdf
 
-import FilesScreen2
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -22,6 +21,7 @@ import com.quantumstudio.smartpdf.pdf.data.PdfFile
 import com.quantumstudio.smartpdf.pdf.data.PdfScanner
 import com.quantumstudio.smartpdf.pdf.import2.PDFImportManager
 import com.quantumstudio.smartpdf.pdf.viewer.PDFViewerActivity
+import com.quantumstudio.smartpdf.ui.screens.FilesScreen2
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
