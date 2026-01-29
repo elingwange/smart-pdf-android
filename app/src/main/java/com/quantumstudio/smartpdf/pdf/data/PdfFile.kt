@@ -11,9 +11,12 @@ data class PdfFile(
     val path: String,        // 私有目录路径
     val size: Long,          // 文件大小（字节）
     val pages: Int,          // 页数
-    val uploadTime: Long = System.currentTimeMillis(),
+    val uploadTime: Long = System.currentTimeMillis(), // 导入时间？
+    val lastModifiedTime: Long = 0, // 最后更新时间
     val category: String? = null,    // 分类
     val ownerId: String? = null,     // 用户 ID
     val version: Int = 1,            // 版本号
+    val currentPage: Int = 0,          // 当前阅读页数
+    val isRecent: Boolean = false,   // 是否最近阅读标记
     val isFavorite: Boolean = false  // 收藏标记
 )

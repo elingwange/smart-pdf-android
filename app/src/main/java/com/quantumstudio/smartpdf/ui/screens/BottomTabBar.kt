@@ -39,15 +39,15 @@ fun BottomTabBar(
 
     // 定义 Tab 列表
     val tabs = listOf(
-        BottomTabItem2("Files", Icons.Default.List) {
+        BottomTabItem("Files", Icons.Default.List) {
             FilesScreen(
                 importedFiles = importedFiles,
                 onSelectPdf = onSelectPdf,
                 onOpenPdf = onOpenPdf
             )
         },
-        BottomTabItem2("Mate", Icons.Default.Face) { AIMateScreen() },
-        BottomTabItem2("Settings", Icons.Default.Settings) { SettingsScreen() }
+        BottomTabItem("Mate", Icons.Default.Face) { AIMateScreen() },
+        BottomTabItem("Settings", Icons.Default.Settings) { SettingsScreen() }
     )
 
     Scaffold(
