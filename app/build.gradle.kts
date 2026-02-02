@@ -46,19 +46,25 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.appcompat)
+    // 引入 ViewModel 为 Compose 提供的支持
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // 处理生命周期相关的状态采集
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
     // pdf reader
     implementation(project(":android-pdf-viewer"))
     // -------------------
@@ -69,5 +75,18 @@ dependencies {
     implementation("androidx.room:room-ktx:2.5.2")
     // pdf 解析
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+
+    // Compose 基础库
+    implementation(platform(libs.androidx.compose.bom))
+
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3") // 使用 Material 3 组件
+    implementation("androidx.compose.ui:ui-tooling-preview")
+
+    // 导航库 (NavHost, NavController)
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // 图标库 (包含截图中的 Share, Edit, Delete 等)
+    implementation("androidx.compose.material:material-icons-extended")
 
 }

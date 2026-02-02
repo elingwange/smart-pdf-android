@@ -1,8 +1,11 @@
 [versions]
-agp = "8.4.2"
+#agp = "8.4.2"
+agp = "8.6.0"
 kotlin = "1.9.23"
 composeCompiler = "1.5.11"
 composeBom = "2024.02.02"
+# 添加 ViewModel 和 Lifecycle 相关版本
+androidxLifecycle = "2.8.4"
 
 coreKtx = "1.15.0"
 junit = "4.13.2"
@@ -30,6 +33,10 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+# 添加 ViewModel Compose 支持
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
+# 如果你还需要在 ViewModel 中使用 runtime 状态
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
 
 pdfiumandroid = { module = "com.github.DineroRegnskab:PdfiumAndroid", version.ref = "pdfiumandroid" }
 
