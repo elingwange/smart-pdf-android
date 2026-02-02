@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui
+package com.quantumstudio.smartpdf.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -24,7 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.quantumstudio.smartpdf.pdf.data.PdfFile
+import com.quantumstudio.smartpdf.data.model.PdfFile
+import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.FileUtils
 
 @Composable
@@ -73,7 +74,7 @@ fun PdfListItem(pdf: PdfFile, onMenuClick: () -> Unit) {
                 modifier = Modifier.padding(top = 4.dp)
             ) {
                 Text(
-                    text = FileUtils.formatDate(pdf.uploadTime),
+                    text = CommonUtils.formatDate(pdf.uploadTime),
                     fontSize = 12.sp,
                     color = Color.Gray
                 )

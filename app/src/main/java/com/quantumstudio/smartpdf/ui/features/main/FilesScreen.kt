@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.screens
+package com.quantumstudio.smartpdf.ui.features.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -22,13 +22,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.quantumstudio.smartpdf.pdf.data.PdfFile
-import com.quantumstudio.smartpdf.ui.PdfActionSheet
-import com.quantumstudio.smartpdf.ui.PdfListItem
+import com.quantumstudio.smartpdf.data.model.PdfFile
+import com.quantumstudio.smartpdf.ui.components.PdfActionSheet
+import com.quantumstudio.smartpdf.ui.components.PdfListItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FilesScreen2(
+fun FilesScreen(
     pdfFiles: List<PdfFile>,
     onOpenPdf: (PdfFile) -> Unit,
     onRefresh: () -> Unit

@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.screens
+package com.quantumstudio.smartpdf.ui.features.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column

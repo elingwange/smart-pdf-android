@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.pdf.viewer
+package com.quantumstudio.smartpdf.ui.features.viewer
 
 import android.net.Uri
 import android.os.Bundle

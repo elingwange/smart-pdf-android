@@ -1,7 +1,8 @@
-package com.quantumstudio.smartpdf.pdf.data
+package com.quantumstudio.smartpdf.data.scanner
 
 import android.content.Context
 import android.os.Environment
+import com.quantumstudio.smartpdf.data.model.PdfFile
 import java.io.File
 
 object PdfScanner {
@@ -36,7 +37,7 @@ object PdfScanner {
                     path = file.absolutePath,
                     size = file.length(),
                     pages = 0, // 后面可用 PDF 库解析页数
-                    lastModifiedTime = file.lastModified()
+                    lastModified = file.lastModified()
                 )
                 pdfList.add(pdfFile)
             }

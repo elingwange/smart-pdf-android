@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.viewmodel
+package com.quantumstudio.smartpdf.ui.features.main
 
 import android.content.Context
 import android.content.pm.PackageManager
@@ -10,14 +10,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.quantumstudio.smartpdf.pdf.data.PdfFile
-import com.quantumstudio.smartpdf.pdf.data.PdfScanner
-import kotlinx.coroutines.Dispatchers
+import com.quantumstudio.smartpdf.data.model.PdfFile
+import com.quantumstudio.smartpdf.data.repository.PdfRepository
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
-class MainViewModel : ViewModel() {
+class MainViewModel(private val repository: PdfRepository) : ViewModel() {
     // 使用 Compose 状态
     private val _pdfFiles = mutableStateListOf<PdfFile>()
     val pdfFiles: List<PdfFile> = _pdfFiles
@@ -39,12 +38,22 @@ class MainViewModel : ViewModel() {
     }
 
     fun scanPdfs(context: Context) {
+        if (!hasFileAccess) return
         viewModelScope.launch {
-            val scanned = withContext(Dispatchers.IO) {
-                PdfScanner.scanAllPdfFiles(context)
-            }
+            val scanned = repository.getAllPdfs(context)
             _pdfFiles.clear()
             _pdfFiles.addAll(scanned)
+        }
+    }
+
+    // 添加工厂类
+    class Factory(private val repository: PdfRepository) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                return MainViewModel(repository) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui
+package com.quantumstudio.smartpdf.ui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,7 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.quantumstudio.smartpdf.pdf.data.PdfFile
+import com.quantumstudio.smartpdf.data.model.PdfFile
+import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.FileUtils
 
 data class MenuOption(
@@ -100,7 +101,7 @@ fun PdfHeaderSection(pdf: PdfFile) {
         ) {
             Text(pdf.name, color = Color.White, maxLines = 1)
             Text(
-                "${FileUtils.formatDate(pdf.uploadTime)} • ${FileUtils.formatFileSize(pdf.size)}",
+                "${CommonUtils.formatDate(pdf.uploadTime)} • ${FileUtils.formatFileSize(pdf.size)}",
                 color = Color.Gray,
                 fontSize = 12.sp
             )

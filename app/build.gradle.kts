@@ -55,7 +55,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     // 处理生命周期相关的状态采集
     implementation(libs.androidx.lifecycle.runtime.compose)
-    
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -70,9 +70,9 @@ dependencies {
     // -------------------
     // Room 数据库
     // -------------------
-    implementation("androidx.room:room-runtime:2.5.2")
-    kapt("androidx.room:room-compiler:2.5.2")
-    implementation("androidx.room:room-ktx:2.5.2")
+    implementation("androidx.room:room-runtime:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
     // pdf 解析
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 

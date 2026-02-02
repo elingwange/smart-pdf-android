@@ -25,7 +25,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.quantumstudio.smartpdf.pdf.viewer.PDFViewerActivity"
+            android:name="com.quantumstudio.smartpdf.ui.features.viewer.PDFViewerActivity"
             android:exported="false" />
     </application>
 
