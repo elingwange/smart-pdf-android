@@ -1,6 +1,5 @@
 package com.quantumstudio.smartpdf.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -9,28 +8,34 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
+
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = PdfRed,
+    onPrimary = Color.White,
+    background = PdfBackgroundDark,
+    onBackground = Color.White,
+    surface = PdfSurfaceDark,
+    onSurface = Color.White,
+
+    // 💡 改进点：专门用于导航栏未选中、副标题、分割线
+    surfaceVariant = Color(0xFF2C2C2C),   // 容器色
+    onSurfaceVariant = Color(0xFFBDBDBD), // 内容色（这个就是你想要的“亮一点的灰”）
+    outline = Color(0xFF757575)           // 边框或禁用色
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+    primary = PdfRed,
     onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    background = PdfBackgroundLight,
+    onBackground = Color.Black,
+    surface = PdfSurfaceLight,
+    onSurface = Color.Black,
+
+    surfaceVariant = Color(0xFFF0F00),
+    onSurfaceVariant = Color(0xFF616161)
 )
 
 @Composable

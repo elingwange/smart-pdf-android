@@ -1,16 +1,19 @@
 package com.quantumstudio.smartpdf.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -18,86 +21,96 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.FileUtils
 
 @Composable
-fun PdfListItem(pdf: PdfFile, onMenuClick: () -> Unit) {
-    Row(
+fun PdfListItem(
+    pdf: PdfFile,
+    onClick: () -> Unit,
+    onMoreClick: () -> Unit
+) {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            // ✅ 改进 1：直接使用 surface。
+            // 它对应你定义的 PdfSurfaceDark (0xFF1E1E1E)，比背景亮，层级感清晰。
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        // ✅ 改进 2：可选。如果你想让卡片更有立体感，可以加个很小的阴影
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        // 1. PDF 图标 (根据截图是红底白色 PDF 字样)
-        // 这里假设你有一个名为 ic_pdf 的资源，如果没有可以先用 Box 代替
-        Box(
+        Row(
             modifier = Modifier
-                .size(45.dp)
-                .background(Color.Transparent), // 实际图片自带背景
-            contentAlignment = Alignment.Center
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 替换为你项目中真实的 PDF icon 资源
             Icon(
-                painter = painterResource(id = android.R.drawable.ic_menu_report_image),
-                contentDescription = "PDF Icon",
-                tint = Color.Red,
+                imageVector = Icons.Default.PictureAsPdf,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary, // PdfRed
                 modifier = Modifier.size(40.dp)
             )
-        }
 
-        Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-        // 2. 文件信息 (标题 + 详情行)
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = pdf.name,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White // 截图是深色模式
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 4.dp)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = CommonUtils.formatDate(pdf.uploadTime),
-                    fontSize = 12.sp,
-                    color = Color.Gray
+                    text = pdf.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    // ✅ 改进 3：主标题强制使用 onSurface，保证最高对比度（纯白）
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = " • ",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-                Text(
-                    text = FileUtils.formatFileSize(pdf.size),
-                    fontSize = 12.sp,
-                    color = Color.Gray
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // ✅ 改进 4：次要信息使用 onSurfaceVariant。
+                    // 在你新定义的 Theme 中，它是较亮的灰色 (0xFFBDBDBD)，清晰且有区分度。
+                    val secondaryStyle = MaterialTheme.typography.bodySmall
+                    val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+                    Text(text = "${pdf.pages}P", style = secondaryStyle, color = secondaryColor)
+
+                    Text(
+                        text = " • ",
+                        // ✅ 改进 5：分隔符使用 outline，它的颜色比次要文字更暗一点，视觉上不抢戏
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    )
+
+                    Text(
+                        text = FileUtils.formatFileSize(pdf.size),
+                        style = secondaryStyle,
+                        color = secondaryColor
+                    )
+
+                    Text(text = " • ", color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
+                    Text(
+                        text = CommonUtils.formatDate(pdf.lastModified),
+                        style = secondaryStyle,
+                        color = secondaryColor
+                    )
+                }
+            }
+
+            IconButton(onClick = onMoreClick) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "More actions",
+                    // 右侧图标也建议用次要内容色
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-
-        // 3. 更多按钮
-        IconButton(onClick = onMenuClick) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "More",
-                tint = Color.LightGray
-            )
         }
     }
 }

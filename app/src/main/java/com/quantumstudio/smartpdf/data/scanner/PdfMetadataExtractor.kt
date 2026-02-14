@@ -15,7 +15,8 @@ object PdfMetadataExtractor {
             name = file.name,
             path = file.absolutePath,
             size = file.length(),
-            pages = pageCount
+            pages = pageCount,
+            lastModified = file.lastModified()
         )
     }
 }

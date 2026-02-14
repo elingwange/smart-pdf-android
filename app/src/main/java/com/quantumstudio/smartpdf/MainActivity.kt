@@ -3,12 +3,17 @@ package com.quantumstudio.smartpdf
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
 import com.quantumstudio.smartpdf.data.local.PdfDatabase
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
 import com.quantumstudio.smartpdf.data.scanner.PdfScanner
 import com.quantumstudio.smartpdf.ui.features.main.MainScreen
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
+import com.quantumstudio.smartpdf.ui.theme.SmartPDFTheme
 
 // MainActivity.kt
 
@@ -32,8 +37,18 @@ class MainActivity : ComponentActivity() {
         viewModel =
             ViewModelProvider(this, MainViewModel.Factory(repository))[MainViewModel::class.java]
 
+
         setContent {
-            MainScreen(viewModel = viewModel)
+            // 1. 使用你定义好的主题包住整个内容
+            SmartPDFTheme(dynamicColor = false) {
+                // 2. 这里的 Surface 会自动根据 darkTheme 获取背景色
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    MainScreen(viewModel = viewModel)
+                }
+            }
         }
     }
 

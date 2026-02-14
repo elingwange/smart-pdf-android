@@ -2,10 +2,27 @@ package com.quantumstudio.smartpdf.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+//val PdfRed = Color(0xFFE53935) // 经典的 PDF 红色
+//val PdfDarkGrey = Color(0xFF121212) // 深色背景
+//val PdfLightGrey = Color(0xFFE1E8E2) // 浅色背景
+//
+//val pdfItemDark = Color(0xFF0A3057)
+//val pdfItemLight = Color(0x02000000)
+//
+//val default = Color(0xFFFFC107)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// 品牌色
+val PdfRed = Color(0xFFE53935)
+val PdfRedLight = Color(0xFFFF8A80)
+
+// 背景色
+val PdfBackgroundDark = Color(0xFF121212)
+val PdfBackgroundLight = Color(0xFFF8F9FA) // 稍微带点灰的白，比纯白更有质感
+
+// 表面色（用于卡片、导航栏等层级）
+val PdfSurfaceDark = Color(0xFF1E1E1E) // 稍微比背景亮一点点，产生立体感
+val PdfSurfaceLight = Color(0xFFFFFFFF)
+
+// 内容辅助色
+val TextSecondaryDark = Color(0xFFBDBDBD) // 次要文字灰色
+val TextSecondaryLight = Color(0xFF757575)

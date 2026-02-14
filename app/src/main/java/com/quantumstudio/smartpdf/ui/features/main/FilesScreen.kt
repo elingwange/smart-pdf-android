@@ -17,7 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,7 +33,6 @@ fun FilesScreen(
     onRefresh: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
-    val scope = rememberCoroutineScope()
     var selectedPdf by remember { mutableStateOf<PdfFile?>(null) }
     var showSheet by remember { mutableStateOf(false) }
 
@@ -53,17 +51,6 @@ fun FilesScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-//        LazyColumn(modifier = Modifier.fillMaxSize()) {
-//            items(pdfFiles) { pdf ->
-//                Text(
-//                    text = pdf.name,
-//                    modifier = Modifier
-//                        .padding(4.dp)
-//                        .clickable { onOpenPdf(pdf) }
-//                )
-//            }
-//        }
-
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -72,7 +59,10 @@ fun FilesScreen(
             items(pdfFiles) { pdf ->
                 PdfListItem(
                     pdf = pdf,
-                    onMenuClick = {
+                    onClick = {
+                        selectedPdf = pdf
+                    },
+                    onMoreClick = {
                         selectedPdf = pdf
                         showSheet = true
                     }

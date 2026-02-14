@@ -3,7 +3,7 @@
 agp = "8.6.0"
 kotlin = "1.9.23"
 composeCompiler = "1.5.11"
-composeBom = "2024.02.02"
+composeBom = "2025.01.00"
 # 添加 ViewModel 和 Lifecycle 相关版本
 androidxLifecycle = "2.8.4"
 

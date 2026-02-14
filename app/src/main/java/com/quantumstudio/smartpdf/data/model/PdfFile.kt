@@ -3,17 +3,16 @@ package com.quantumstudio.smartpdf.data.model
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
-import java.util.UUID
 
 @Entity(tableName = "pdf_files")
 data class PdfFile(
-    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    @PrimaryKey
+    val path: String,        // 使用绝对路径作为主键，不再使用 UUID
     val name: String,
-    val path: String,
     val size: Long,
     val pages: Int,
+    val lastModified: Long,
     val uploadTime: Long = System.currentTimeMillis(),
-    val lastModified: Long = 0,
     val category: String? = null,
     val ownerId: String? = null,
     val version: Int = 1,
@@ -21,23 +20,21 @@ data class PdfFile(
     val isRecent: Boolean = false,
     val isFavorite: Boolean = false
 ) {
-    // 关键点：给这个辅助构造函数加上 @Ignore
-    // 这样 Room 就会只看上面那个主构造函数，错误就会消失
+    // 删掉之前的辅助构造函数，或者改成这样：
     @Ignore
     constructor(
         name: String,
         path: String,
         size: Long,
         pages: Int,
-        lastModified: Long = 0
+        lastModified: Long
     ) : this(
-        id = UUID.randomUUID().toString(),
-        name = name,
         path = path,
+        name = name,
         size = size,
         pages = pages,
-        uploadTime = System.currentTimeMillis(),
         lastModified = lastModified,
+        uploadTime = System.currentTimeMillis(),
         category = null,
         ownerId = null,
         version = 1,

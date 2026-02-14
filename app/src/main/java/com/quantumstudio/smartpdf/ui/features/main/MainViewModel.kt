@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
@@ -14,12 +13,17 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class MainViewModel(private val repository: PdfRepository) : ViewModel() {
     // 使用 Compose 状态
-    private val _pdfFiles = mutableStateListOf<PdfFile>()
-    val pdfFiles: List<PdfFile> = _pdfFiles
+//    private val _pdfFiles = mutableStateListOf<PdfFile>()
+//    val pdfFiles: List<PdfFile> = _pdfFiles
+    // 改用 StateFlow
+    private val _pdfFiles = MutableStateFlow<List<PdfFile>>(emptyList())
+    val pdfFiles = _pdfFiles.asStateFlow()
 
     // 是否拥有权限的状态
     var hasFileAccess by mutableStateOf(false)
@@ -41,8 +45,10 @@ class MainViewModel(private val repository: PdfRepository) : ViewModel() {
         if (!hasFileAccess) return
         viewModelScope.launch {
             val scanned = repository.getAllPdfs(context)
-            _pdfFiles.clear()
-            _pdfFiles.addAll(scanned)
+//            _pdfFiles.clear()
+//            _pdfFiles.addAll(scanned)
+            // 直接发出新的 List 即可触发 UI 更新
+            _pdfFiles.value = scanned
         }
     }
 
