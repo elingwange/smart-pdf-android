@@ -6,6 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
 import com.quantumstudio.smartpdf.data.local.PdfDatabase
@@ -39,8 +41,9 @@ class MainActivity : ComponentActivity() {
 
 
         setContent {
+            val themeMode by viewModel.themeMode.collectAsState()
             // 1. 使用你定义好的主题包住整个内容
-            SmartPDFTheme(dynamicColor = false) {
+            SmartPDFTheme(themeMode = themeMode) {
                 // 2. 这里的 Surface 会自动根据 darkTheme 获取背景色
                 Surface(
                     modifier = Modifier.fillMaxSize(),

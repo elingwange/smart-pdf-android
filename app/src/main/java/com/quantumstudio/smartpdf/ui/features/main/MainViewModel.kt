@@ -14,13 +14,24 @@ import androidx.lifecycle.viewModelScope
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+enum class ThemeMode {
+    SYSTEM, LIGHT, DARK
+}
+
 class MainViewModel(private val repository: PdfRepository) : ViewModel() {
-    // 使用 Compose 状态
-//    private val _pdfFiles = mutableStateListOf<PdfFile>()
-//    val pdfFiles: List<PdfFile> = _pdfFiles
+    // switch themes
+    private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    fun setThemeMode(mode: ThemeMode) {
+        _themeMode.value = mode
+        // 💡 导师建议：这里可以加入 DataStore 持久化代码，确保 App 下次打开还能记住选择
+    }
+
     // 改用 StateFlow
     private val _pdfFiles = MutableStateFlow<List<PdfFile>>(emptyList())
     val pdfFiles = _pdfFiles.asStateFlow()

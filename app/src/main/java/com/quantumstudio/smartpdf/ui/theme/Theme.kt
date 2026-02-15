@@ -10,6 +10,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.quantumstudio.smartpdf.ui.features.main.ThemeMode
 
 
 private val DarkColorScheme = darkColorScheme(
@@ -40,11 +41,17 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun SmartPDFTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
+    themeMode: ThemeMode = ThemeMode.SYSTEM, // 接收模式
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    // 💡 逻辑判断：如果是 SYSTEM 则跟随系统，否则强制指定
+    val darkTheme = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

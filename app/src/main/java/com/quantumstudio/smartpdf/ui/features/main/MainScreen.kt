@@ -90,7 +90,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                         0 -> AllFilesTab(viewModel)
                         1 -> RecentFilesTab(viewModel)
                         2 -> FavoriteFilesTab(viewModel)
-                        3 -> SettingsScreen()
+                        3 -> SettingsScreen(viewModel = viewModel)
                     }
                 }
             }
