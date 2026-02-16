@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import com.quantumstudio.smartpdf.ui.theme.PdfRed
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,7 +59,7 @@ fun HomeTopBar(currentPage: Int) {
                     )
                     Text(
                         "PDF",
-                        color = MaterialTheme.colorScheme.primary,
+                        color = PdfRed,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -84,7 +85,7 @@ fun HomeTopBar(currentPage: Int) {
 
         // 注意：如果你希望下方的 ScrollableTabRow 跟着底部的 Tab 联动，
         // 你可以直接使用传进来的 currentPage
-//        val tabs = listOf("ALL", "PDF", "DOC", "PPT") // 这里是你原来的分类逻辑
+//        val tabs = listOf("ALL", "PDF", "DOC", "PPT")
 //
 //        ScrollableTabRow(
 //            selectedTabIndex = 0, // 暂时固定，或者根据业务逻辑处理

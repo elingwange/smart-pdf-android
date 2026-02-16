@@ -76,6 +76,10 @@ dependencies {
     // pdf 解析
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
+    implementation(libs.androidx.datastore.preferences)
+    // DataStore 也需要协程支持
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+
     // Compose 基础库
     implementation(platform(libs.androidx.compose.bom))
 

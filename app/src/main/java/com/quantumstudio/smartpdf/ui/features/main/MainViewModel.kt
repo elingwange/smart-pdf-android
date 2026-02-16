@@ -13,23 +13,33 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
+import com.quantumstudio.smartpdf.data.repository.ThemeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 enum class ThemeMode {
     SYSTEM, LIGHT, DARK
 }
 
-class MainViewModel(private val repository: PdfRepository) : ViewModel() {
-    // switch themes
-    private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
-    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+class MainViewModel(
+    private val repository: PdfRepository,
+    private val themeRepository: ThemeRepository
+) : ViewModel() {
+    // 使用 stateIn 将 DataStore 的 Flow 转换为 UI 可用的 StateFlow
+    // 初始值设为 SYSTEM
+    val themeMode = themeRepository.themeModeFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ThemeMode.SYSTEM
+    )
 
     fun setThemeMode(mode: ThemeMode) {
-        _themeMode.value = mode
-        // 💡 导师建议：这里可以加入 DataStore 持久化代码，确保 App 下次打开还能记住选择
+        viewModelScope.launch {
+            themeRepository.saveThemeMode(mode)
+        }
     }
 
     // 改用 StateFlow
@@ -64,11 +74,14 @@ class MainViewModel(private val repository: PdfRepository) : ViewModel() {
     }
 
     // 添加工厂类
-    class Factory(private val repository: PdfRepository) : ViewModelProvider.Factory {
+    class Factory(
+        private val pdfRepository: PdfRepository,
+        private val themeRepository: ThemeRepository
+    ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                return MainViewModel(repository) as T
+                return MainViewModel(pdfRepository, themeRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

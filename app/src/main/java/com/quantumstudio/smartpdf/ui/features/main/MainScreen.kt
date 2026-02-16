@@ -115,8 +115,8 @@ fun AppBottomNavigation(currentPage: Int, onTabSelected: (Int) -> Unit) {
                 icon = { Icon(icon, contentDescription = null) },
                 label = { Text(label, fontSize = 10.sp) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color.Red,
-                    selectedTextColor = Color.Red,
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
 
                     // 💡 使用我们新定义的 onSurfaceVariant，它亮度刚好，不刺眼也不模糊
                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,

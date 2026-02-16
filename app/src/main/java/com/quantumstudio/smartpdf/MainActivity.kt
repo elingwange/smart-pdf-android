@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
 import com.quantumstudio.smartpdf.data.local.PdfDatabase
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
+import com.quantumstudio.smartpdf.data.repository.ThemeRepository
 import com.quantumstudio.smartpdf.data.scanner.PdfScanner
 import com.quantumstudio.smartpdf.ui.features.main.MainScreen
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
@@ -33,11 +34,17 @@ class MainActivity : ComponentActivity() {
         val scanner = PdfScanner
 
         // 2. 初始化 Repository
-        val repository = PdfRepository(database.pdfFileDao())
+        val pdfRepository = PdfRepository(database.pdfFileDao())
+        // 简单实现方案（实际项目中建议使用 Hilt 或 Koin 注入）
+        val themeRepository = ThemeRepository(applicationContext)
+
 
         // 3. 使用 Factory 创建 ViewModel
         viewModel =
-            ViewModelProvider(this, MainViewModel.Factory(repository))[MainViewModel::class.java]
+            ViewModelProvider(
+                this,
+                MainViewModel.Factory(pdfRepository, themeRepository)
+            )[MainViewModel::class.java]
 
 
         setContent {

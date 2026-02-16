@@ -106,7 +106,6 @@ fun SettingsScreen(viewModel: MainViewModel) {// 观察当前主题状态（用�
                 SettingDivider()
                 SettingRow(Icons.Outlined.PrivacyTip, "Privacy policy") { /* 处理点击 */ }
                 SettingDivider()
-                // 版本号行，右侧带有副标题
                 SettingRow(
                     icon = Icons.Outlined.Info,
                     title = "Version",
