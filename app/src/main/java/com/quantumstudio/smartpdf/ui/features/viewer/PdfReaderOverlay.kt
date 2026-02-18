@@ -1,4 +1,5 @@
 import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -44,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,13 +70,17 @@ fun PdfReaderOverlay(uri: Uri, onBack: () -> Unit) {
     val activity = context as? Activity
 
     // 状态管理
-    var isNightMode by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    // ✨ 使用 rememberSaveable 替代 remember，防止旋转后状态丢失
+    var isNightMode by rememberSaveable { mutableStateOf(false) }
+    var isUiVisible by rememberSaveable { mutableStateOf(true) }
+    var showBrightnessSlider by rememberSaveable { mutableStateOf(false) }
+
+    // 注意：Uri 和 PDFView 实例不能直接用 rememberSaveable 存
+    // 但我们可以通过重置 lastLoadedUri 来触发 update 重新加载
     var lastLoadedUri by remember { mutableStateOf<Uri?>(null) }
-    var isUiVisible by remember { mutableStateOf(true) }
-    var showBrightnessSlider by remember { mutableStateOf(false) }
-    var currentPage by remember { mutableStateOf(0) }
-    var totalPages by remember { mutableStateOf(0) }
+    var currentPage by rememberSaveable { mutableStateOf(0) }
+    var totalPages by rememberSaveable { mutableStateOf(0) }
     var pdfViewInstance by remember { mutableStateOf<PDFView?>(null) }
 
     val screenHeightPx =
@@ -223,7 +229,17 @@ fun PdfReaderOverlay(uri: Uri, onBack: () -> Unit) {
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        BottomActionIcon(Icons.Default.ScreenRotation)
+                        BottomActionIcon(Icons.Default.ScreenRotation, onClick = {
+                            activity?.let {
+                                // 切换逻辑：如果是竖屏则切横屏，反之亦然
+                                it.requestedOrientation =
+                                    if (it.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
+                                        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                                    } else {
+                                        ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                                    }
+                            }
+                        })
 
                         // ✅ 黑暗模式切换图标
                         BottomActionIcon(
