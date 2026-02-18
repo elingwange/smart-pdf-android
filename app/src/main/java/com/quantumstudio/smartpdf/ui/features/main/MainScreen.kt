@@ -1,5 +1,7 @@
 package com.quantumstudio.smartpdf.ui.features.main
 
+import PdfReaderOverlay
+import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -23,8 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,32 +45,25 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(viewModel: MainViewModel = viewModel()) {
     val context = LocalContext.current
-    // 1. 定义 PagerState 替代 NavController 进行 Tab 切换
     val pagerState = rememberPagerState(pageCount = { 4 })
     val scope = rememberCoroutineScope()
 
-    // 权限与数据监听逻辑保持不变
+    // 追踪当前打开的 PDF
+    var activePdfUri by remember { mutableStateOf<Uri?>(null) }
+
+    // 权限逻辑
     LaunchedEffect(Unit) { viewModel.checkPermission(context) }
     LaunchedEffect(viewModel.hasFileAccess) {
         if (viewModel.hasFileAccess) viewModel.scanPdfs(context)
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            if (viewModel.hasFileAccess) {
-                // 将 pagerState 传进去，以便根据页面改变 TopBar 内容
-                MainTopBar(currentPage = pagerState.currentPage)
-            }
-        },
+        topBar = { if (viewModel.hasFileAccess) MainTopBar(currentPage = pagerState.currentPage) },
         bottomBar = {
             if (viewModel.hasFileAccess) {
                 AppBottomNavigation(
                     currentPage = pagerState.currentPage,
-                    onTabSelected = { index ->
-                        // 瞬间跳转，不带动画以追求极致速度
-                        scope.launch { pagerState.scrollToPage(index) }
-                    }
+                    onTabSelected = { index -> scope.launch { pagerState.scrollToPage(index) } }
                 )
             }
         }
@@ -79,23 +76,77 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             if (!viewModel.hasFileAccess) {
                 PermissionGuideScreen(onGrantClick = { CommonUtils.requestAllFilesAccess(context) })
             } else {
-                // 2. 核心容器：HorizontalPager
                 HorizontalPager(
                     state = pagerState,
-                    userScrollEnabled = false, // 禁用手势滑动，确保点击切换的确定性
-                    beyondViewportPageCount = 3 // 预加载所有页面，实现“秒开”
+                    userScrollEnabled = false,
+                    beyondViewportPageCount = 3
                 ) { pageIndex ->
-                    // 3. 根据页面索引分发不同的内容
+                    // ✨ 关键点 1：在这里定义点击后的逻辑
+                    val onFileClick: (Uri) -> Unit = { uri -> activePdfUri = uri }
+
                     when (pageIndex) {
-                        0 -> AllFilesTab(viewModel)
-                        1 -> RecentFilesTab(viewModel)
-                        2 -> FavoriteFilesTab(viewModel)
+                        0 -> AllFilesTab(viewModel, onFileClick)
+                        1 -> RecentFilesTab(viewModel, onFileClick)
+                        2 -> FavoriteFilesTab(viewModel, onFileClick)
                         3 -> SettingsScreen(viewModel = viewModel)
                     }
                 }
             }
         }
     }
+
+    // PDF 预览层（盖在最上面）
+    activePdfUri?.let { uri ->
+        PdfReaderOverlay(uri = uri, onBack = { activePdfUri = null })
+    }
+}
+
+// ✨ 关键点 2：PdfListContent 必须声明接收这个函数参数
+@Composable
+fun PdfListContent(
+    files: List<PdfFile>,
+    viewModel: MainViewModel,
+    onFileClick: (Uri) -> Unit
+) {
+    if (files.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No PDF files found", color = Color.Gray)
+        }
+    } else {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(items = files, key = { it.path }) { pdf ->
+                PdfListItem(
+                    pdf = pdf,
+                    onClick = {
+                        // ✨ 关键点 3：点击时调用传进来的函数
+                        onFileClick(Uri.fromFile(java.io.File(pdf.path)))
+                    },
+                    onMoreClick = { /* 更多菜单 */ }
+                )
+            }
+        }
+    }
+}
+
+// ✨ 关键点 4：所有的 Tab 都要接收并向下传递 onFileClick
+@Composable
+fun AllFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
+    val files by viewModel.pdfFiles.collectAsState()
+    PdfListContent(files, viewModel, onFileClick)
+}
+
+@Composable
+fun RecentFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
+    val files by viewModel.pdfFiles.collectAsState()
+    val recentFiles = remember(files) { files.filter { it.isRecent } }
+    PdfListContent(recentFiles, viewModel, onFileClick)
+}
+
+@Composable
+fun FavoriteFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
+    val files by viewModel.pdfFiles.collectAsState()
+    val favoriteFiles = remember(files) { files.filter { it.isFavorite } }
+    PdfListContent(favoriteFiles, viewModel, onFileClick)
 }
 
 @Composable
@@ -127,53 +178,4 @@ fun AppBottomNavigation(currentPage: Int, onTabSelected: (Int) -> Unit) {
             )
         }
     }
-}
-
-
-@Composable
-fun PdfListContent(
-    files: List<PdfFile>,
-    viewModel: MainViewModel
-) {
-    if (files.isEmpty()) {
-        // 通用空状态
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No PDF files found", color = Color.Gray)
-        }
-    } else {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(
-                items = files,
-                key = { it.path } // 使用路径作为 Key，利于 Compose 跨 Tab 识别并复用组件
-            ) { pdf ->
-                PdfListItem(
-                    pdf = pdf,
-                    onClick = { /* TODO: 跳转阅读器 */ },
-                    onMoreClick = { /* TODO: 显示操作菜单 */ }
-                )
-            }
-        }
-    }
-}
-
-// 三个 Tab 只是对数据的不同“视图”
-@Composable
-fun AllFilesTab(viewModel: MainViewModel) {
-    val files by viewModel.pdfFiles.collectAsState()
-    PdfListContent(files, viewModel)
-}
-
-@Composable
-fun RecentFilesTab(viewModel: MainViewModel) {
-    val files by viewModel.pdfFiles.collectAsState()
-    // 假设你有 isRecent 过滤逻辑
-    val recentFiles = remember(files) { files.filter { it.isRecent } }
-    PdfListContent(recentFiles, viewModel)
-}
-
-@Composable
-fun FavoriteFilesTab(viewModel: MainViewModel) {
-    val files by viewModel.pdfFiles.collectAsState()
-    val favoriteFiles = remember(files) { files.filter { it.isFavorite } }
-    PdfListContent(favoriteFiles, viewModel)
 }
