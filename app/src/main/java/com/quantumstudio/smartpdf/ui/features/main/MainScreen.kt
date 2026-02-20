@@ -97,7 +97,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
 
     // PDF 预览层（盖在最上面）
     activePdfUri?.let { uri ->
-        PdfReaderOverlay(uri = uri, onBack = { activePdfUri = null })
+        PdfReaderOverlay(uri = uri, onBack = { activePdfUri = null }, viewModel = viewModel)
     }
 }
 

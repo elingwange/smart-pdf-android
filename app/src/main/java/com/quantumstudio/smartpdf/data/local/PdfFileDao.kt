@@ -8,13 +8,16 @@ import com.quantumstudio.smartpdf.data.model.PdfFile
 
 @Dao
 interface PdfFileDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // 修改：由 REPLACE 改为 IGNORE
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(pdfs: List<PdfFile>)
 
     @Query("SELECT * FROM pdf_files ORDER BY lastModified DESC")
     suspend fun getAllPdfs(): List<PdfFile>
 
-    // 可选：添加清理重复数据的测试方法
+    @Query("UPDATE pdf_files SET isFavorite = :isFavorite WHERE path = :path")
+    suspend fun updateFavorite(path: String, isFavorite: Boolean)
+
     @Query("DELETE FROM pdf_files")
     suspend fun deleteAll()
 }

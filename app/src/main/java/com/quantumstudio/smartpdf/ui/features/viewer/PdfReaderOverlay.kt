@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
@@ -45,6 +46,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,12 +66,13 @@ import com.github.barteksc.pdfviewer.PDFView
 import com.quantumstudio.smartpdf.ui.components.BottomActionIcon
 import com.quantumstudio.smartpdf.ui.components.BrightnessSliderLayout
 import com.quantumstudio.smartpdf.ui.components.ReaderMenuItem
+import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 
 @Composable
-fun PdfReaderOverlay(uri: Uri, onBack: () -> Unit) {
+fun PdfReaderOverlay(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
     val context = LocalContext.current
     val activity = context as? Activity
 
@@ -87,15 +90,26 @@ fun PdfReaderOverlay(uri: Uri, onBack: () -> Unit) {
     val screenHeightPx =
         with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
 
-    // ✨ 控制显隐逻辑：页码指示器
-    var isPageIndicatorVisible by remember { mutableStateOf(false) }
-    var scrollSignal by remember { mutableStateOf(0L) }
+    // --- 状态绑定 ---
+    // 观察全局 PDF 列表
+    val pdfFiles by viewModel.pdfFiles.collectAsState()
 
-    // 只要 scrollSignal 变动（滑动或拖动），就显示 2 秒后消失
+    // 自动初始化并实时跟随数据源：根据当前 URI 的路径查找其收藏状态
+    val isFavorite = remember(pdfFiles, uri) {
+        pdfFiles.find { it.path == uri.path }?.isFavorite ?: false
+    }
+
+    // 控制显隐逻辑：页码指示器
+    var isPageIndicatorVisible by remember { mutableStateOf(false) }
+    // 修改：让初始值也作为信号的一部分，或者手动触发一次
+    var scrollSignal by remember { mutableStateOf(System.currentTimeMillis()) }
+
+    // 只要 scrollSignal 变动，就重新计时
     LaunchedEffect(scrollSignal) {
+        // 只有总页数已知时才执行，避免初始加载时的空白闪烁
         if (totalPages > 0) {
             isPageIndicatorVisible = true
-            delay(1300)
+            delay(1300) // 你设置的 1.3 秒
             isPageIndicatorVisible = false
         }
     }
@@ -127,9 +141,11 @@ fun PdfReaderOverlay(uri: Uri, onBack: () -> Unit) {
                         .onPageChange { page, count ->
                             currentPage = page
                             totalPages = count
+                            // ✨ 增加：页码改变也算滑动信号，触发倒计时
+                            scrollSignal = System.currentTimeMillis()
                         }
-                        // ✨ 核心：捕获任何页内或跨页的滑动位移
                         .onPageScroll { _, _ ->
+                            // 滑动位移触发信号
                             scrollSignal = System.currentTimeMillis()
                         }
                         .load()
@@ -243,9 +259,30 @@ fun PdfReaderOverlay(uri: Uri, onBack: () -> Unit) {
                             ReaderMenuItem(Icons.Default.Info, "Info") { showMenu = false }
                             ReaderMenuItem(Icons.Default.Share, "Share") { showMenu = false }
                             ReaderMenuItem(
-                                Icons.Default.FavoriteBorder,
-                                "Add to favorites"
-                            ) { showMenu = false }
+                                // 这里的 UI 显示是正确的，因为重组会更新它们
+                                icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                label = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                                tint = if (isFavorite) Color(0xFF9999FF) else Color.White
+                            ) {
+                                val path = uri.path ?: ""
+                                if (path.isNotEmpty()) {
+                                    // 逻辑修复：先保存当前状态，用于判断提示语
+                                    val willBeFavorite = !isFavorite
+
+                                    // 1. 调用 ViewModel 更新（内存+数据库）
+                                    viewModel.toggleFavorite(path)
+
+                                    // 2. 弹出提示：使用 willBeFavorite 确保提示语与动作一致
+                                    val message =
+                                        if (willBeFavorite) "Added to favorites" else "Removed from favorites"
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        message,
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                showMenu = false
+                            }
                             ReaderMenuItem(Icons.Default.Delete, "Delete") { showMenu = false }
                         }
                     }

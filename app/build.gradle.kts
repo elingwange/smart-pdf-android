@@ -65,6 +65,8 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
+
     // pdf reader
     implementation(project(":android-pdf-viewer"))
     // -------------------

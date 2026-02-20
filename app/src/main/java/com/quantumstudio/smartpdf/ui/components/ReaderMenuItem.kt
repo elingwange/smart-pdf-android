@@ -13,13 +13,14 @@ import androidx.compose.ui.unit.sp
 fun ReaderMenuItem(
     icon: ImageVector,
     label: String,
+    tint: Color = Color.White.copy(alpha = 0.7f),
     onClick: () -> Unit
 ) {
     DropdownMenuItem(
         text = {
             Text(
                 text = label,
-                color = Color.White, // 确保在深色菜单背景下可见
+                color = Color.White,
                 fontSize = 14.sp
             )
         },
@@ -27,7 +28,8 @@ fun ReaderMenuItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.7f) // 图标稍微淡一点，更有质感
+                // ✨ 使用传入的颜色
+                tint = tint
             )
         },
         onClick = onClick

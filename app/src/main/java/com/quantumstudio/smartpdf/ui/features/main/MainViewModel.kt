@@ -73,6 +73,23 @@ class MainViewModel(
         }
     }
 
+    fun toggleFavorite(path: String) {
+        viewModelScope.launch {
+            // 1. 获取当前列表中的状态
+            val currentFiles = _pdfFiles.value
+            val fileToUpdate = currentFiles.find { it.path == path } ?: return@launch
+            val newStatus = !fileToUpdate.isFavorite
+
+            // 2. 立即更新内存 UI
+            _pdfFiles.value = currentFiles.map {
+                if (it.path == path) it.copy(isFavorite = newStatus) else it
+            }
+
+            // 3. 异步持久化到数据库
+            repository.toggleFavorite(path, newStatus)
+        }
+    }
+
     // 添加工厂类
     class Factory(
         private val pdfRepository: PdfRepository,
