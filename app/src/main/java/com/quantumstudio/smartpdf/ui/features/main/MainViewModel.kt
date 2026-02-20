@@ -90,6 +90,18 @@ class MainViewModel(
         }
     }
 
+    fun markAsRead(path: String) {
+        viewModelScope.launch {
+            // 1. 持久化到数据库
+            repository.markAsRead(path)
+
+            // 2. 更新内存状态，确保 UI 刷新
+            _pdfFiles.value = _pdfFiles.value.map { pdf ->
+                if (pdf.path == path) pdf.copy(lastReadTime = System.currentTimeMillis()) else pdf
+            }
+        }
+    }
+
     // 添加工厂类
     class Factory(
         private val pdfRepository: PdfRepository,

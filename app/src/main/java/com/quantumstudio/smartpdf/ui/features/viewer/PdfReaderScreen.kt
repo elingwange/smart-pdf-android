@@ -72,7 +72,7 @@ import kotlin.math.roundToInt
 
 
 @Composable
-fun PdfReaderOverlay(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
+fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
     val context = LocalContext.current
     val activity = context as? Activity
 
@@ -141,12 +141,16 @@ fun PdfReaderOverlay(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                         .onPageChange { page, count ->
                             currentPage = page
                             totalPages = count
-                            // ✨ 增加：页码改变也算滑动信号，触发倒计时
+                            // 增加：页码改变也算滑动信号，触发倒计时
                             scrollSignal = System.currentTimeMillis()
                         }
                         .onPageScroll { _, _ ->
                             // 滑动位移触发信号
                             scrollSignal = System.currentTimeMillis()
+                        }
+                        .onLoad {
+                            // 文件加载成功，记录为最近阅读
+                            viewModel.markAsRead(uri.path ?: "")
                         }
                         .load()
                     lastLoadedUri = uri

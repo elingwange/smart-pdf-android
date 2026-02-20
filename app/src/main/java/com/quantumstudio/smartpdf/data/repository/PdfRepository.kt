@@ -32,5 +32,9 @@ class PdfRepository(
         pdfFileDao.updateFavorite(path, isFavorite)
     }
 
+    suspend fun markAsRead(path: String) = withContext(Dispatchers.IO) {
+        pdfFileDao.updateLastReadTime(path, System.currentTimeMillis())
+    }
+
     // 可以在这里增加：删除、搜索、标记收藏等方法
 }

@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import com.quantumstudio.smartpdf.data.model.PdfFile
-import com.quantumstudio.smartpdf.ui.features.viewer.PDFViewerActivity
 import java.io.File
 
 object FileUtils {
@@ -21,11 +20,4 @@ object FileUtils {
         )
     }
 
-    fun openPdf(context: Context, pdf: PdfFile) {
-        // 直接在这里处理跳转逻辑
-        val intent = Intent(context, PDFViewerActivity::class.java).apply {
-            putExtra("pdf_uri", Uri.fromFile(File(pdf.path)))
-        }
-        context.startActivity(intent)
-    }
 }

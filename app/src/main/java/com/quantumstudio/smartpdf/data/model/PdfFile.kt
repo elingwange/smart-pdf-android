@@ -17,10 +17,9 @@ data class PdfFile(
     val ownerId: String? = null,
     val version: Int = 1,
     val currentPage: Int = 0,
-    val isRecent: Boolean = false,
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    var lastReadTime: Long = 0L // 最后读取时间（时间戳）
 ) {
-    // 删掉之前的辅助构造函数，或者改成这样：
     @Ignore
     constructor(
         name: String,
@@ -39,7 +38,7 @@ data class PdfFile(
         ownerId = null,
         version = 1,
         currentPage = 0,
-        isRecent = false,
-        isFavorite = false
+        isFavorite = false,
+        lastReadTime = 0L
     )
 }

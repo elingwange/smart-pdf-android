@@ -1,6 +1,6 @@
 package com.quantumstudio.smartpdf.ui.features.main
 
-import PdfReaderOverlay
+import PdfReaderScreen
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,7 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
@@ -81,13 +81,13 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     userScrollEnabled = false,
                     beyondViewportPageCount = 3
                 ) { pageIndex ->
-                    // ✨ 关键点 1：在这里定义点击后的逻辑
+                    // 关键点 1：在这里定义点击后的逻辑
                     val onFileClick: (Uri) -> Unit = { uri -> activePdfUri = uri }
 
                     when (pageIndex) {
                         0 -> AllFilesTab(viewModel, onFileClick)
-                        1 -> RecentFilesTab(viewModel, onFileClick)
-                        2 -> FavoriteFilesTab(viewModel, onFileClick)
+                        1 -> FavoriteFilesTab(viewModel, onFileClick)
+                        2 -> RecentFilesTab(viewModel, onFileClick)
                         3 -> SettingsScreen(viewModel = viewModel)
                     }
                 }
@@ -97,7 +97,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
 
     // PDF 预览层（盖在最上面）
     activePdfUri?.let { uri ->
-        PdfReaderOverlay(uri = uri, onBack = { activePdfUri = null }, viewModel = viewModel)
+        PdfReaderScreen(uri = uri, onBack = { activePdfUri = null }, viewModel = viewModel)
     }
 }
 
@@ -118,7 +118,7 @@ fun PdfListContent(
                 PdfListItem(
                     pdf = pdf,
                     onClick = {
-                        // ✨ 关键点 3：点击时调用传进来的函数
+                        // 关键点 3：点击时调用传进来的函数
                         onFileClick(Uri.fromFile(java.io.File(pdf.path)))
                     },
                     onMoreClick = { /* 更多菜单 */ }
@@ -128,7 +128,7 @@ fun PdfListContent(
     }
 }
 
-// ✨ 关键点 4：所有的 Tab 都要接收并向下传递 onFileClick
+// 关键点 4：所有的 Tab 都要接收并向下传递 onFileClick
 @Composable
 fun AllFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
     val files by viewModel.pdfFiles.collectAsState()
@@ -138,7 +138,13 @@ fun AllFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
 @Composable
 fun RecentFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
     val files by viewModel.pdfFiles.collectAsState()
-    val recentFiles = remember(files) { files.filter { it.isRecent } }
+
+    // 过滤出阅读时间大于 0 的文件，并按时间倒序排列
+    val recentFiles = remember(files) {
+        files.filter { it.lastReadTime > 0 }
+            .sortedByDescending { it.lastReadTime }
+    }
+
     PdfListContent(recentFiles, viewModel, onFileClick)
 }
 
@@ -153,8 +159,8 @@ fun FavoriteFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
 fun AppBottomNavigation(currentPage: Int, onTabSelected: (Int) -> Unit) {
     val items = listOf(
         "All Files" to Icons.Default.Home,
+        "Favorite" to Icons.Default.Favorite,
         "Recent" to Icons.Default.History,
-        "Bookmark" to Icons.Default.Bookmark,
         "Settings" to Icons.Default.Settings
     )
 
