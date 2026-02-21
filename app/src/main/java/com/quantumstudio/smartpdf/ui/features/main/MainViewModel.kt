@@ -102,6 +102,56 @@ class MainViewModel(
         }
     }
 
+    fun deleteFile(pdf: PdfFile, context: android.content.Context) {
+        viewModelScope.launch {
+            val success = repository.deletePdfFile(pdf)
+            if (success) {
+                // 1. 更新内存中的列表，让 UI 立即刷新
+                _pdfFiles.value = _pdfFiles.value.filter { it.path != pdf.path }
+
+                // 2. 提示用户
+                android.widget.Toast.makeText(
+                    context,
+                    "File deleted",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+
+                // 3. 重要：通知系统扫描媒体库，防止其他 App 还以为这文件存在
+                android.media.MediaScannerConnection.scanFile(
+                    context, arrayOf(pdf.path), null, null
+                )
+            } else {
+                android.widget.Toast.makeText(
+                    context,
+                    "Delete failed",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    fun renameFile(pdf: PdfFile, newName: String, context: android.content.Context) {
+        viewModelScope.launch {
+            val updatedPdf = repository.renamePdfFile(pdf, newName)
+            if (updatedPdf != null) {
+                // 更新 UI 列表：替换掉旧对象
+                _pdfFiles.value = _pdfFiles.value.map {
+                    if (it.path == pdf.path) updatedPdf else it
+                }
+                // 通知系统媒体库更新
+                android.media.MediaScannerConnection.scanFile(
+                    context, arrayOf(pdf.path, updatedPdf.path), null, null
+                )
+            } else {
+                android.widget.Toast.makeText(
+                    context,
+                    "Rename failed",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
     // 添加工厂类
     class Factory(
         private val pdfRepository: PdfRepository,

@@ -37,4 +37,40 @@ class PdfRepository(
     }
 
     // 可以在这里增加：删除、搜索、标记收藏等方法
+
+    suspend fun deletePdfFile(pdf: PdfFile): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val file = java.io.File(pdf.path)
+            // 1. 执行物理删除
+            val deleted = if (file.exists()) file.delete() else true
+
+            if (deleted) {
+                // 2. 从数据库删除记录
+                pdfFileDao.deleteByPath(pdf.path)
+            }
+            deleted
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun renamePdfFile(pdf: PdfFile, newName: String): PdfFile? =
+        withContext(Dispatchers.IO) {
+            try {
+                val oldFile = java.io.File(pdf.path)
+                val newPath = oldFile.parent + java.io.File.separator + newName
+                val newFile = java.io.File(newPath)
+
+                if (oldFile.renameTo(newFile)) {
+                    // ✨ 数据库处理：因为 path 是主键，必须先删后插
+                    val newPdf = pdf.copy(path = newPath, name = newName)
+                    pdfFileDao.deleteByPath(pdf.path)
+                    pdfFileDao.insertAll(listOf(newPdf))
+                    newPdf
+                } else null
+            } catch (e: Exception) {
+                null
+            }
+        }
 }

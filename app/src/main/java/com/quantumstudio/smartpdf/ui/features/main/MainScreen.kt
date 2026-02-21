@@ -38,7 +38,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.ui.components.MenuAction
+import com.quantumstudio.smartpdf.ui.components.PdfDeleteDialog
 import com.quantumstudio.smartpdf.ui.components.PdfListItem
+import com.quantumstudio.smartpdf.ui.components.PdfRenameDialog
 import com.quantumstudio.smartpdf.ui.components.PermissionGuideScreen
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsScreen
 import com.quantumstudio.smartpdf.util.CommonUtils
@@ -110,8 +112,14 @@ fun PdfListContent(
     viewModel: MainViewModel,
     onFileClick: (Uri) -> Unit
 ) {
+    val context = LocalContext.current
     // 状态定义（正确）
     var selectedPdfForInfo by remember { mutableStateOf<PdfFile?>(null) }
+    // 新增：用于删除确认的状态
+    var pdfToDelete by remember { mutableStateOf<PdfFile?>(null) }
+
+    var pdfToRename by remember { mutableStateOf<PdfFile?>(null) }
+
 
     // 修改：增加 Box 以便 Dialog 能够正确弹出
     Box(modifier = Modifier.fillMaxSize()) {
@@ -129,7 +137,8 @@ fun PdfListContent(
                             when (action) {
                                 is MenuAction.Info -> selectedPdfForInfo = pdf // 赋值（正确）
                                 is MenuAction.Favorite -> viewModel.toggleFavorite(pdf.path)
-                                // ... 其他 action
+                                is MenuAction.Rename -> pdfToRename = pdf
+                                is MenuAction.Delete -> pdfToDelete = pdf
                                 else -> {}
                             }
                         }
@@ -143,6 +152,29 @@ fun PdfListContent(
             PdfInfoDialog(
                 pdf = pdf,
                 onDismiss = { selectedPdfForInfo = null }
+            )
+        }
+
+        // 添加删除弹窗
+        pdfToDelete?.let { pdf ->
+            PdfDeleteDialog(
+                fileName = pdf.name,
+                onDismiss = { pdfToDelete = null },
+                onConfirm = {
+                    viewModel.deleteFile(pdf, context) // 执行删除
+                    pdfToDelete = null
+                }
+            )
+        }
+
+        pdfToRename?.let { pdf ->
+            PdfRenameDialog(
+                currentName = pdf.name,
+                onDismiss = { pdfToRename = null },
+                onConfirm = { newName ->
+                    viewModel.renameFile(pdf, newName, context)
+                    pdfToRename = null
+                }
             )
         }
     }

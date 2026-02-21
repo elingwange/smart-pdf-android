@@ -28,4 +28,7 @@ interface PdfFileDao {
     // 获取最近阅读的文件（按时间倒序，取前 20 个）
     @Query("SELECT * FROM pdf_files WHERE lastReadTime > 0 ORDER BY lastReadTime DESC LIMIT 20")
     suspend fun getRecentPdfs(): List<PdfFile>
+
+    @Query("DELETE FROM pdf_files WHERE path = :path")
+    suspend fun deleteByPath(path: String)
 }
