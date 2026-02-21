@@ -44,6 +44,7 @@ import com.quantumstudio.smartpdf.ui.components.PdfRenameDialog
 import com.quantumstudio.smartpdf.ui.components.PermissionGuideScreen
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsScreen
 import com.quantumstudio.smartpdf.util.CommonUtils
+import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
 import kotlinx.coroutines.launch
 
 @Composable
@@ -139,6 +140,7 @@ fun PdfListContent(
                                 is MenuAction.Favorite -> viewModel.toggleFavorite(pdf.path)
                                 is MenuAction.Rename -> pdfToRename = pdf
                                 is MenuAction.Delete -> pdfToDelete = pdf
+                                is MenuAction.Share -> sharePdf(context, pdf)
                                 else -> {}
                             }
                         }
