@@ -1,11 +1,5 @@
 package com.quantumstudio.smartpdf.util
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import com.quantumstudio.smartpdf.data.model.PdfFile
-import java.io.File
-
 object FileUtils {
 
     // 格式化文件大小：B, KB, MB

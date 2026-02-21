@@ -17,6 +17,11 @@ object CommonUtils {
         return sdf.format(Date(timestamp))
     }
 
+    fun formatTimestamp(timestamp: Long): String {
+        val sdf = java.text.SimpleDateFormat("MMM dd, yyyy h:mm:ss a", java.util.Locale.ENGLISH)
+        return sdf.format(java.util.Date(timestamp))
+    }
+
     // 你的权限请求函数，放在工具类或 MainScreen 文件末尾
     fun requestAllFilesAccess(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

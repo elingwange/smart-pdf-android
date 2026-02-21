@@ -70,7 +70,6 @@ import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
-
 @Composable
 fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
     val context = LocalContext.current
@@ -91,8 +90,11 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
         with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
 
     // --- 状态绑定 ---
-    // 观察全局 PDF 列表
+    // pdf info dialog
+    var showInfoDialog by remember { mutableStateOf(false) }
+    // 获取当前 PDF 对象以展示详细信息
     val pdfFiles by viewModel.pdfFiles.collectAsState()
+    val currentPdf = remember(pdfFiles, uri) { pdfFiles.find { it.path == uri.path } }
 
     // 自动初始化并实时跟随数据源：根据当前 URI 的路径查找其收藏状态
     val isFavorite = remember(pdfFiles, uri) {
@@ -109,7 +111,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
         // 只有总页数已知时才执行，避免初始加载时的空白闪烁
         if (totalPages > 0) {
             isPageIndicatorVisible = true
-            delay(1300) // 你设置的 1.3 秒
+            delay(1300)
             isPageIndicatorVisible = false
         }
     }
@@ -184,7 +186,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                         .size(45.dp, 30.dp)
                         .background(
                             color = Color(0xFF9999FF),
-                            // ✨ 关键：只设置左侧的圆角 (TopStart 和 BottomStart)
+                            // 关键：只设置左侧的圆角 (TopStart 和 BottomStart)
                             shape = RoundedCornerShape(
                                 topStart = 18.dp,
                                 bottomStart = 18.dp,
@@ -195,7 +197,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                         .draggable(
                             orientation = Orientation.Vertical,
                             state = rememberDraggableState { delta ->
-                                // ✨ 拖动时同步更新信号，防止拖动过程中标识突然消失
+                                // 拖动时同步更新信号，防止拖动过程中标识突然消失
                                 scrollSignal = System.currentTimeMillis()
                                 val pageDelta = (delta / dragRange) * totalPages
                                 val targetPage = (currentPage + pageDelta).roundToInt()
@@ -260,7 +262,10 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                             onDismissRequest = { showMenu = false },
                             modifier = Modifier.background(Color(0xFF222222))
                         ) {
-                            ReaderMenuItem(Icons.Default.Info, "Info") { showMenu = false }
+                            ReaderMenuItem(Icons.Default.Info, "Info") {
+                                showMenu = false
+                                showInfoDialog = true
+                            }
                             ReaderMenuItem(Icons.Default.Share, "Share") { showMenu = false }
                             ReaderMenuItem(
                                 // 这里的 UI 显示是正确的，因为重组会更新它们
@@ -292,6 +297,14 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                     }
                 }
             }
+        }
+
+        // --- Info对话框渲染 ---
+        if (showInfoDialog && currentPdf != null) {
+            PdfInfoDialog(
+                pdf = currentPdf,
+                onDismiss = { showInfoDialog = false }
+            )
         }
 
         // 4. 底部菜单 (增加旋转强制刷新)
