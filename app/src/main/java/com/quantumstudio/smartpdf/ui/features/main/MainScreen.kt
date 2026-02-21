@@ -1,5 +1,6 @@
 package com.quantumstudio.smartpdf.ui.features.main
 
+import PdfInfoDialog
 import PdfReaderScreen
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.quantumstudio.smartpdf.data.model.PdfFile
+import com.quantumstudio.smartpdf.ui.components.MenuAction
 import com.quantumstudio.smartpdf.ui.components.PdfListItem
 import com.quantumstudio.smartpdf.ui.components.PermissionGuideScreen
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsScreen
@@ -101,29 +103,47 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
     }
 }
 
-// ✨ 关键点 2：PdfListContent 必须声明接收这个函数参数
+// 关键点 2：PdfListContent 必须声明接收这个函数参数
 @Composable
 fun PdfListContent(
     files: List<PdfFile>,
     viewModel: MainViewModel,
     onFileClick: (Uri) -> Unit
 ) {
-    if (files.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No PDF files found", color = Color.Gray)
-        }
-    } else {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(items = files, key = { it.path }) { pdf ->
-                PdfListItem(
-                    pdf = pdf,
-                    onClick = {
-                        // 关键点 3：点击时调用传进来的函数
-                        onFileClick(Uri.fromFile(java.io.File(pdf.path)))
-                    },
-                    onMoreClick = { /* 更多菜单 */ }
-                )
+    // 状态定义（正确）
+    var selectedPdfForInfo by remember { mutableStateOf<PdfFile?>(null) }
+
+    // 修改：增加 Box 以便 Dialog 能够正确弹出
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (files.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No PDF files found", color = Color.Gray)
             }
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(items = files, key = { it.path }) { pdf ->
+                    PdfListItem(
+                        pdf = pdf,
+                        onClick = { onFileClick(Uri.fromFile(java.io.File(pdf.path))) },
+                        onMenuAction = { action ->
+                            when (action) {
+                                is MenuAction.Info -> selectedPdfForInfo = pdf // 赋值（正确）
+                                is MenuAction.Favorite -> viewModel.toggleFavorite(pdf.path)
+                                // ... 其他 action
+                                else -> {}
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        // 关键修复：添加这一段代码，让 Dialog 真正渲染出来
+        selectedPdfForInfo?.let { pdf ->
+            PdfInfoDialog(
+                pdf = pdf,
+                onDismiss = { selectedPdfForInfo = null }
+            )
         }
     }
 }

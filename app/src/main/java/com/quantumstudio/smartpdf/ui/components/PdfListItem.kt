@@ -1,6 +1,7 @@
 package com.quantumstudio.smartpdf.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,17 +11,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.quantumstudio.smartpdf.data.model.PdfFile
@@ -31,19 +44,20 @@ import com.quantumstudio.smartpdf.util.FileUtils
 fun PdfListItem(
     pdf: PdfFile,
     onClick: () -> Unit,
-    onMoreClick: () -> Unit
+    // ✨ 修改：将 onMoreClick 改为动作回调，方便统一处理逻辑
+    onMenuAction: (MenuAction) -> Unit
 ) {
+    // 💡 状态管理：控制菜单显示/隐藏
+    var showMenu by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            // ✅ 改进 1：直接使用 surface。
-            // 它对应你定义的 PdfSurfaceDark (0xFF1E1E1E)，比背景亮，层级感清晰。
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        // ✅ 改进 2：可选。如果你想让卡片更有立体感，可以加个很小的阴影
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -55,7 +69,7 @@ fun PdfListItem(
             Icon(
                 imageVector = Icons.Default.PictureAsPdf,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary, // PdfRed
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(40.dp)
             )
 
@@ -65,7 +79,6 @@ fun PdfListItem(
                 Text(
                     text = pdf.name,
                     style = MaterialTheme.typography.titleMedium,
-                    // ✅ 改进 3：主标题强制使用 onSurface，保证最高对比度（纯白）
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -73,28 +86,18 @@ fun PdfListItem(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
+                // ... 次要信息 Row 部分保持不变 ...
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // ✅ 改进 4：次要信息使用 onSurfaceVariant。
-                    // 在你新定义的 Theme 中，它是较亮的灰色 (0xFFBDBDBD)，清晰且有区分度。
                     val secondaryStyle = MaterialTheme.typography.bodySmall
                     val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
-
                     Text(text = "${pdf.pages}P", style = secondaryStyle, color = secondaryColor)
-
-                    Text(
-                        text = " • ",
-                        // ✅ 改进 5：分隔符使用 outline，它的颜色比次要文字更暗一点，视觉上不抢戏
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                    )
-
+                    Text(text = " • ", color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                     Text(
                         text = FileUtils.formatFileSize(pdf.size),
                         style = secondaryStyle,
                         color = secondaryColor
                     )
-
                     Text(text = " • ", color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
-
                     Text(
                         text = CommonUtils.formatDate(pdf.lastModified),
                         style = secondaryStyle,
@@ -103,14 +106,82 @@ fun PdfListItem(
                 }
             }
 
-            IconButton(onClick = onMoreClick) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More actions",
-                    // 右侧图标也建议用次要内容色
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            // ✨ 改进：集成三圆点菜单逻辑
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More actions",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // 弹出式菜单
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    // 简化写法：直接使用属性设置背景色
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    // 复用你之前定义的 ReaderMenuItem 结构
+                    ListItemMenu(
+                        isFavorite = pdf.isFavorite,
+                        onAction = { action ->
+                            showMenu = false
+                            onMenuAction(action)
+                        }
+                    )
+                }
             }
         }
     }
+}
+
+sealed class MenuAction {
+    object Info : MenuAction()
+    object Share : MenuAction()
+    object Rename : MenuAction()
+    object Favorite : MenuAction()
+    object Delete : MenuAction()
+}
+
+@Composable
+fun ListItemMenu(
+    isFavorite: Boolean,
+    onAction: (MenuAction) -> Unit
+) {
+    // Info
+    ReaderMenuItem(
+        icon = Icons.Default.Info,
+        label = "Info",
+        tint = MaterialTheme.colorScheme.onSurfaceVariant
+    ) { onAction(MenuAction.Info) }
+
+    // Share
+    ReaderMenuItem(
+        icon = Icons.Default.Share,
+        label = "Share",
+        tint = MaterialTheme.colorScheme.onSurfaceVariant
+    ) { onAction(MenuAction.Share) }
+
+    // Rename (假设你导入了 Edit 图标)
+    ReaderMenuItem(
+        icon = Icons.Default.Edit,
+        label = "Rename",
+        tint = MaterialTheme.colorScheme.onSurfaceVariant
+    ) { onAction(MenuAction.Rename) }
+
+    // Favorite
+    ReaderMenuItem(
+        icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+        label = if (isFavorite) "Remove from favorites" else "Add to favorites",
+        tint = if (isFavorite) Color(0xFF9999FF) else MaterialTheme.colorScheme.onSurfaceVariant
+    ) { onAction(MenuAction.Favorite) }
+
+    // Delete
+    ReaderMenuItem(
+        icon = Icons.Default.Delete,
+        label = "Delete",
+        tint = MaterialTheme.colorScheme.error // ✨ 删除使用 error 颜色（通常是红色）
+    ) { onAction(MenuAction.Delete) }
 }
