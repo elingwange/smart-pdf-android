@@ -46,9 +46,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.main.ThemeMode
+import com.quantumstudio.smartpdf.util.CommonUtils.openSystemFileManager
 
 @Composable
 fun SettingsScreen(viewModel: MainViewModel) {// 观察当前主题状态（用于显示 subtitle 和 RadioButton 选中状态）
+    val context = androidx.compose.ui.platform.LocalContext.current
     val currentTheme by viewModel.themeMode.collectAsState()
     // 控制对话框显示的开关
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -77,7 +79,9 @@ fun SettingsScreen(viewModel: MainViewModel) {// 观察当前主题状态（用�
             shape = RoundedCornerShape(12.dp)
         ) {
             Column {
-                SettingRow(Icons.Outlined.Folder, "File Manager") { /* 处理点击 */ }
+                SettingRow(Icons.Outlined.Folder, "File Manager") { /* 处理点击 */
+                    openSystemFileManager(context)
+                }
                 SettingDivider()
                 SettingRow(
                     icon = Icons.Outlined.Palette,

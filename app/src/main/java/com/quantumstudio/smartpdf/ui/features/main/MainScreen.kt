@@ -228,12 +228,10 @@ fun AppBottomNavigation(currentPage: Int, onTabSelected: (Int) -> Unit) {
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.primary,
                     selectedTextColor = MaterialTheme.colorScheme.primary,
-
-                    // 💡 使用我们新定义的 onSurfaceVariant，它亮度刚好，不刺眼也不模糊
+                    // onSurfaceVariant亮度刚好，不刺眼也不模糊
                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-
-                    indicatorColor = Color.Transparent // 保持你的透明偏好
+                    indicatorColor = Color.Transparent // 保持透明偏好
                 )
             )
         }

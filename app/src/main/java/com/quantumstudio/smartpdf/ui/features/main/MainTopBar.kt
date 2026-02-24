@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import com.quantumstudio.smartpdf.ui.theme.PdfRed
+import com.quantumstudio.smartpdf.util.CommonUtils.openSystemFileManager
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,6 +49,8 @@ fun MainTopBar(currentPage: Int) { // 修改这里：接收 Int 类型的索引
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeTopBar(currentPage: Int) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+
     Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
         TopAppBar(
             title = {
@@ -66,7 +69,7 @@ fun HomeTopBar(currentPage: Int) {
             },
             actions = {
                 // 这里可以根据 currentPage 做微调，比如在“最近”页面不显示排序
-                IconButton(onClick = { /* ... */ }) {
+                IconButton(onClick = { openSystemFileManager(context) }) {
                     Icon(Icons.Default.FolderOpen, null, tint = MaterialTheme.colorScheme.onSurface)
                 }
                 IconButton(onClick = { /* ... */ }) {
