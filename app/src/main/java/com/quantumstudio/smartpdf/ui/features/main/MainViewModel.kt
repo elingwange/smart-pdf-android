@@ -17,6 +17,8 @@ import com.quantumstudio.smartpdf.data.repository.ThemeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -28,6 +30,33 @@ class MainViewModel(
     private val repository: PdfRepository,
     private val themeRepository: ThemeRepository
 ) : ViewModel() {
+
+    //=============== searching ===============
+    // 1. 原始数据流（来自数据库）
+    private val _allPdfs = repository.getAllPdfsFlow()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    // 2. 搜索词状态
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    // 3. 核心：通过 combine 实时计算搜索结果
+    val searchResult = _searchQuery
+        .debounce(200) // 防抖，防止输入太快卡顿
+        .combine(_allPdfs) { query, allFiles ->
+            if (query.isBlank()) {
+                emptyList() // 没输入时不显示结果
+            } else {
+                allFiles.filter { it.name.contains(query, ignoreCase = true) }
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun onQueryChange(newQuery: String) {
+        _searchQuery.value = newQuery
+    }
+    //=============== searching ===============
+
+
     // 使用 stateIn 将 DataStore 的 Flow 转换为 UI 可用的 StateFlow
     // 初始值设为 SYSTEM
     val themeMode = themeRepository.themeModeFlow.stateIn(

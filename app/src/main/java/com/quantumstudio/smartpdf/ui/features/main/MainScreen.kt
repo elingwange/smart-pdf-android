@@ -2,6 +2,7 @@ package com.quantumstudio.smartpdf.ui.features.main
 
 import PdfInfoDialog
 import PdfReaderScreen
+import SearchScreen
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,6 +54,9 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
     val pagerState = rememberPagerState(pageCount = { 4 })
     val scope = rememberCoroutineScope()
 
+    // --- 新增：控制搜索界面的状态 ---
+    var isSearching by remember { mutableStateOf(false) }
+
     // 追踪当前打开的 PDF
     var activePdfUri by remember { mutableStateOf<Uri?>(null) }
 
@@ -62,47 +66,74 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
         if (viewModel.hasFileAccess) viewModel.scanPdfs(context)
     }
 
-    Scaffold(
-        topBar = { if (viewModel.hasFileAccess) MainTopBar(currentPage = pagerState.currentPage) },
-        bottomBar = {
-            if (viewModel.hasFileAccess) {
-                AppBottomNavigation(
-                    currentPage = pagerState.currentPage,
-                    onTabSelected = { index -> scope.launch { pagerState.scrollToPage(index) } }
-                )
-            }
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            if (!viewModel.hasFileAccess) {
-                PermissionGuideScreen(onGrantClick = { CommonUtils.requestAllFilesAccess(context) })
-            } else {
-                HorizontalPager(
-                    state = pagerState,
-                    userScrollEnabled = false,
-                    beyondViewportPageCount = 3
-                ) { pageIndex ->
-                    // 关键点 1：在这里定义点击后的逻辑
-                    val onFileClick: (Uri) -> Unit = { uri -> activePdfUri = uri }
+    Box(modifier = Modifier.fillMaxSize()) {
 
-                    when (pageIndex) {
-                        0 -> AllFilesTab(viewModel, onFileClick)
-                        1 -> FavoriteFilesTab(viewModel, onFileClick)
-                        2 -> RecentFilesTab(viewModel, onFileClick)
-                        3 -> SettingsScreen(viewModel = viewModel)
+
+        Scaffold(
+            topBar = {
+                if (viewModel.hasFileAccess) MainTopBar(
+                    currentPage = pagerState.currentPage,
+                    onSearchClick = { isSearching = true }
+                )
+            },
+            bottomBar = {
+                if (viewModel.hasFileAccess) {
+                    AppBottomNavigation(
+                        currentPage = pagerState.currentPage,
+                        onTabSelected = { index -> scope.launch { pagerState.scrollToPage(index) } }
+                    )
+                }
+            }
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+            ) {
+                if (!viewModel.hasFileAccess) {
+                    PermissionGuideScreen(onGrantClick = { CommonUtils.requestAllFilesAccess(context) })
+                } else {
+                    HorizontalPager(
+                        state = pagerState,
+                        userScrollEnabled = false,
+                        beyondViewportPageCount = 3
+                    ) { pageIndex ->
+                        // 关键点 1：在这里定义点击后的逻辑
+                        val onFileClick: (Uri) -> Unit = { uri -> activePdfUri = uri }
+
+                        when (pageIndex) {
+                            0 -> AllFilesTab(viewModel, onFileClick)
+                            1 -> FavoriteFilesTab(viewModel, onFileClick)
+                            2 -> RecentFilesTab(viewModel, onFileClick)
+                            3 -> SettingsScreen(viewModel = viewModel)
+                        }
                     }
                 }
             }
         }
-    }
 
-    // PDF 预览层（盖在最上面）
-    activePdfUri?.let { uri ->
-        PdfReaderScreen(uri = uri, onBack = { activePdfUri = null }, viewModel = viewModel)
+
+        if (isSearching) {
+            SearchScreen(
+                viewModel = viewModel,
+                onBack = {
+                    isSearching = false
+                    viewModel.onQueryChange("")
+                },
+                onFileClick = { pdf ->
+                    isSearching = false
+                    // 关闭搜索后，清空搜索词，防止下次进入还显示结果
+                    viewModel.onQueryChange("")
+                    activePdfUri = Uri.fromFile(java.io.File(pdf.path))
+                }
+            )
+        }
+
+        // PDF 预览层（盖在最上面）
+        activePdfUri?.let { uri ->
+            PdfReaderScreen(uri = uri, onBack = { activePdfUri = null }, viewModel = viewModel)
+        }
+
     }
 }
 

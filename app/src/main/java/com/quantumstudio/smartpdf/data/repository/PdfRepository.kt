@@ -5,6 +5,7 @@ import com.quantumstudio.smartpdf.data.local.PdfFileDao
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.data.scanner.PdfScanner
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 class PdfRepository(
@@ -73,4 +74,12 @@ class PdfRepository(
                 null
             }
         }
+
+    /**
+     * 获取所有 PDF 文件的流
+     * 这里的 Flow 会在数据库内容变化时自动发射新列表
+     */
+    fun getAllPdfsFlow(): Flow<List<PdfFile>> {
+        return pdfFileDao.getAllPdfsFlow()
+    }
 }

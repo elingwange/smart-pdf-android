@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.quantumstudio.smartpdf.data.model.PdfFile
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PdfFileDao {
@@ -31,4 +32,7 @@ interface PdfFileDao {
 
     @Query("DELETE FROM pdf_files WHERE path = :path")
     suspend fun deleteByPath(path: String)
+
+    @Query("SELECT * FROM pdf_files ORDER BY lastModified DESC")
+    fun getAllPdfsFlow(): Flow<List<PdfFile>> // 移除 suspend，返回 Flow
 }

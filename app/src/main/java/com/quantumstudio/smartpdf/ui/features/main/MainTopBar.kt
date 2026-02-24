@@ -24,7 +24,10 @@ import com.quantumstudio.smartpdf.util.CommonUtils.openSystemFileManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainTopBar(currentPage: Int) { // 修改这里：接收 Int 类型的索引
+fun MainTopBar(
+    currentPage: Int,
+    onSearchClick: () -> Unit
+) { // 修改这里：接收 Int 类型的索引
     // 根据索引判断显示哪种 TopBar
     // 假设索引 3 是设置页
     if (currentPage == 3) {
@@ -42,13 +45,13 @@ fun MainTopBar(currentPage: Int) { // 修改这里：接收 Int 类型的索引
         )
     } else {
         // 0, 1, 2 都是主文件相关的页面，显示带有 Logo 和操作按钮的 HomeTopBar
-        HomeTopBar(currentPage)
+        HomeTopBar(currentPage, onSearchClick)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeTopBar(currentPage: Int) {
+fun HomeTopBar(currentPage: Int, onSearchClick: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
 
     Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
@@ -75,7 +78,7 @@ fun HomeTopBar(currentPage: Int) {
                 IconButton(onClick = { /* ... */ }) {
                     Icon(Icons.Default.Sort, null, tint = MaterialTheme.colorScheme.onSurface)
                 }
-                IconButton(onClick = { /* ... */ }) {
+                IconButton(onClick = onSearchClick) {
                     Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurface)
                 }
             },
@@ -85,36 +88,5 @@ fun HomeTopBar(currentPage: Int) {
                 actionIconContentColor = Color.White
             )
         )
-
-        // 注意：如果你希望下方的 ScrollableTabRow 跟着底部的 Tab 联动，
-        // 你可以直接使用传进来的 currentPage
-//        val tabs = listOf("ALL", "PDF", "DOC", "PPT")
-//
-//        ScrollableTabRow(
-//            selectedTabIndex = 0, // 暂时固定，或者根据业务逻辑处理
-//            containerColor = Color.Transparent,
-//            edgePadding = 16.dp,
-//            divider = {},
-//            indicator = { tabPositions ->
-//                TabRowDefaults.SecondaryIndicator(
-//                    modifier = Modifier.tabIndicatorOffset(tabPositions[0]),
-//                    color = Color.Red
-//                )
-//            }
-//        ) {
-//            tabs.forEachIndexed { index, title ->
-//                androidx.compose.material3.Tab(
-//                    selected = index == 0,
-//                    onClick = { /* 处理分类切换 */ },
-//                    text = {
-//                        Text(
-//                            text = title,
-//                            color = if (index == 0) Color.White else Color.Gray,
-//                            fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal
-//                        )
-//                    }
-//                )
-//            }
-//        }
     }
 }
