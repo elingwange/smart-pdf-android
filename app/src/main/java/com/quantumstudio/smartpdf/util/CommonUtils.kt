@@ -2,6 +2,7 @@ package com.quantumstudio.smartpdf.util
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -78,4 +79,75 @@ object CommonUtils {
             ).show()
         }
     }
+
+    fun openAppInfoSettings(context: Context) {
+        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            // 直接定位到 Smart PDF 的系统详情页
+            data = android.net.Uri.fromParts("package", context.packageName, null)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
+
+    fun triggerDefaultPdfPicker(context: Context) {
+        try {
+            // 1. 创建一个临时的空 PDF 文件（仅用于触发系统识别）
+            val tempFile = java.io.File(context.cacheDir, "default_check.pdf")
+            if (!tempFile.exists()) tempFile.createNewFile()
+
+            // 2. 获取文件的 Uri (需要你配置过 FileProvider)
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                tempFile
+            )
+
+            // 3. 构建查看 PDF 的 Intent
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/pdf")
+                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            // 4. 显式弹出选择器，标题可以提示用户“请选择本应用并点‘始终’”
+            context.startActivity(
+                android.content.Intent.createChooser(
+                    intent,
+                    "Set as Default PDF Viewer"
+                )
+            )
+        } catch (e: Exception) {
+            // 如果失败，降级方案：跳转到应用详情页
+            val detailIntent =
+                android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    .apply {
+                        data = android.net.Uri.fromParts("package", context.packageName, null)
+                    }
+            context.startActivity(detailIntent)
+        }
+    }
+
+    fun getAppVersionName(context: Context): String {
+        return try {
+            val packageManager = context.packageManager // ✨ 必须通过 context 获取实例
+            val packageName = context.packageName
+
+            val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Android 13+ 使用新的 flag 方式
+                packageManager.getPackageInfo(
+                    packageName,
+                    PackageManager.PackageInfoFlags.of(0) // ✨ 确保 PackageManager 首字母大写
+                )
+            } else {
+                // 旧版本兼容
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(packageName, 0)
+            }
+            packageInfo.versionName ?: "Unknown"
+        } catch (e: Exception) {
+            e.printStackTrace()
+            "Unknown"
+        }
+    }
+
 }

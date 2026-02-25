@@ -2,6 +2,7 @@ package com.quantumstudio.smartpdf.ui.features.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.SettingsSuggest
 import androidx.compose.material.icons.outlined.ThumbUpOffAlt
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -43,15 +45,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.main.ThemeMode
+import com.quantumstudio.smartpdf.util.CommonUtils
+import com.quantumstudio.smartpdf.util.CommonUtils.openAppInfoSettings
 import com.quantumstudio.smartpdf.util.CommonUtils.openSystemFileManager
 
 @Composable
-fun SettingsScreen(viewModel: MainViewModel) {// 观察当前主题状态（用于显示 subtitle 和 RadioButton 选中状态）
+fun SettingsScreen(viewModel: MainViewModel) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val currentTheme by viewModel.themeMode.collectAsState()
+    // 使用 remember 避免每次重组都去查询系统，提高性能
+    val appVersion = remember { CommonUtils.getAppVersionName(context) }
     // 控制对话框显示的开关
     var showThemeDialog by remember { mutableStateOf(false) }
     // 第二步：根据状态判断是否显示对话框
@@ -65,6 +73,20 @@ fun SettingsScreen(viewModel: MainViewModel) {// 观察当前主题状态（用�
             }
         )
     }
+    // 1. 渲染 Dialog
+    var showDefaultDialog by remember { mutableStateOf(false) }
+    if (showDefaultDialog) {
+        DefaultAppGuideDialog(
+            onDismiss = { showDefaultDialog = false },
+            onConfirm = {
+                showDefaultDialog = false
+                // ✨ 核心逻辑：触发选择器
+                //triggerDefaultPdfPicker(context)
+                openAppInfoSettings(context)
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -88,7 +110,10 @@ fun SettingsScreen(viewModel: MainViewModel) {// 观察当前主题状态（用�
                     title = "Theme Mode"
                 ) { showThemeDialog = true }
                 SettingDivider()
-                SettingRow(Icons.Outlined.SettingsSuggest, "Set as Default") { /* 处理点击 */ }
+                SettingRow(
+                    Icons.Outlined.SettingsSuggest,
+                    "Set as Default"
+                ) { /* 处理点击 */showDefaultDialog = true }
                 // 在 SettingRow 之间插入
                 SettingDivider()
                 SettingRow(Icons.Outlined.Language, "Language") { /* 处理点击 */ }
@@ -113,7 +138,7 @@ fun SettingsScreen(viewModel: MainViewModel) {// 观察当前主题状态（用�
                 SettingRow(
                     icon = Icons.Outlined.Info,
                     title = "Version",
-                    subtitle = "6.3.2"
+                    subtitle = appVersion
                 ) { /* 处理点击 */ }
             }
         }
@@ -201,7 +226,6 @@ fun SettingRow(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    // 💡 这里你用对了！onSurfaceVariant 是次要信息的最佳选择
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
@@ -225,5 +249,53 @@ fun SettingDivider() {
         thickness = 0.5.dp,
         // 使用 outlineVariant 是 M3 的标准做法
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    )
+}
+
+@Composable
+fun DefaultAppGuideDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            androidx.compose.material3.Button(
+                onClick = onConfirm,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)) // 使用你的主题红
+            ) {
+                Text("Okay", color = Color.White, style = MaterialTheme.typography.titleMedium)
+            }
+        },
+        title = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 模拟截图中的 PDF 红色图标
+                Surface(
+                    modifier = Modifier.size(80.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFE53935)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("PDF", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+                Text("Smart PDF", style = MaterialTheme.typography.headlineSmall)
+            }
+        },
+        text = {
+            Text(
+                text = "点击 Okay 后，请在系统设置中找到 ‘默认打开 (Set as default)’，并确保 ‘打开支持的链接’ 已开启。",
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = MaterialTheme.colorScheme.surface
     )
 }

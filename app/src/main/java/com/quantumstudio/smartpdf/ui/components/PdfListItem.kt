@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,8 +33,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.quantumstudio.smartpdf.R
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.FileUtils
@@ -67,9 +68,14 @@ fun PdfListItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.PictureAsPdf,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                // 系统图标
+//                imageVector = Icons.Default.PictureAsPdf,
+//                contentDescription = null,
+//                tint = MaterialTheme.colorScheme.primary,
+                // 资源图标
+                painter = painterResource(id = R.drawable.ic_pdf2),
+                contentDescription = "PDF Icon",
+                tint = Color.Unspecified,
                 modifier = Modifier.size(40.dp)
             )
 
