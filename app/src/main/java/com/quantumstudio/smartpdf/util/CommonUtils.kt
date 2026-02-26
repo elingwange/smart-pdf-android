@@ -136,7 +136,7 @@ object CommonUtils {
                 // Android 13+ 使用新的 flag 方式
                 packageManager.getPackageInfo(
                     packageName,
-                    PackageManager.PackageInfoFlags.of(0) // ✨ 确保 PackageManager 首字母大写
+                    PackageManager.PackageInfoFlags.of(0) // 确保 PackageManager 首字母大写
                 )
             } else {
                 // 旧版本兼容
@@ -150,4 +150,52 @@ object CommonUtils {
         }
     }
 
+    fun openPlayStore(context: Context) {
+        val packageName = context.packageName
+        try {
+            context.startActivity(
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("market://details?id=$packageName")
+                )
+            )
+        } catch (e: Exception) {
+            context.startActivity(
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("https://play.google.com/store/apps/details?id=$packageName")
+                )
+            )
+        }
+    }
+
+    fun sendFeedbackEmail(context: Context) {
+        val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+            // mailto: 协议确保只匹配邮件客户端
+            data = Uri.parse("mailto:")
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("support@yourdomain.com")) // 收件人
+            putExtra(Intent.EXTRA_SUBJECT, "Feedback for Smart PDF App")       // 主件
+            // 在 sendFeedbackEmail 内部
+            val appVersion = getAppVersionName(context) // 复用已有的安全函数
+            val debugInfo =
+                "\n\n--- Debug Info ---\nApp Version: $appVersion\nDevice: ${Build.MODEL}"
+            putExtra(
+                Intent.EXTRA_TEXT,
+                "Hi Team,\n\nI have some feedback regarding...\n\n" + debugInfo
+            ) // 正文
+        }
+
+        try {
+            context.startActivity(Intent.createChooser(emailIntent, "Send feedback via..."))
+        } catch (e: Exception) {
+            // 容错处理：如果用户手机上没有安装任何邮件应用
+            Toast.makeText(context, "No email app installed", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun openPrivacyPolicy(context: Context) {
+        val intent =
+            Intent(Intent.ACTION_VIEW, Uri.parse("https://sites.google.com/view/smart-pdf-mate/"))
+        context.startActivity(intent)
+    }
 }

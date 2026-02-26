@@ -68,12 +68,7 @@ fun PdfListItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                // 系统图标
-//                imageVector = Icons.Default.PictureAsPdf,
-//                contentDescription = null,
-//                tint = MaterialTheme.colorScheme.primary,
-                // 资源图标
-                painter = painterResource(id = R.drawable.ic_pdf2),
+                painter = painterResource(id = R.drawable.ic_pdf),
                 contentDescription = "PDF Icon",
                 tint = Color.Unspecified,
                 modifier = Modifier.size(40.dp)

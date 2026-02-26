@@ -52,7 +52,10 @@ import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.main.ThemeMode
 import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.openAppInfoSettings
+import com.quantumstudio.smartpdf.util.CommonUtils.openPlayStore
+import com.quantumstudio.smartpdf.util.CommonUtils.openPrivacyPolicy
 import com.quantumstudio.smartpdf.util.CommonUtils.openSystemFileManager
+import com.quantumstudio.smartpdf.util.CommonUtils.sendFeedbackEmail
 
 @Composable
 fun SettingsScreen(viewModel: MainViewModel) {
@@ -129,11 +132,17 @@ fun SettingsScreen(viewModel: MainViewModel) {
             shape = RoundedCornerShape(12.dp)
         ) {
             Column {
-                SettingRow(Icons.Outlined.ThumbUpOffAlt, "Rate us") { /* 处理点击 */ }
+                SettingRow(Icons.Outlined.ThumbUpOffAlt, "Rate us") { /* 处理点击 */
+                    openPlayStore(context)
+                }
                 SettingDivider()
-                SettingRow(Icons.Outlined.Feedback, "Feedback") { /* 处理点击 */ }
+                SettingRow(Icons.Outlined.Feedback, "Feedback") { /* 处理点击 */
+                    sendFeedbackEmail(context)
+                }
                 SettingDivider()
-                SettingRow(Icons.Outlined.PrivacyTip, "Privacy policy") { /* 处理点击 */ }
+                SettingRow(Icons.Outlined.PrivacyTip, "Privacy policy") { /* 处理点击 */
+                    openPrivacyPolicy(context)
+                }
                 SettingDivider()
                 SettingRow(
                     icon = Icons.Outlined.Info,
