@@ -12,6 +12,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.quantumstudio.smartpdf.data.model.PdfFile
+import com.quantumstudio.smartpdf.data.model.SortField
+import com.quantumstudio.smartpdf.data.model.SortOrder
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
 import com.quantumstudio.smartpdf.data.repository.ThemeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +35,7 @@ class MainViewModel(
 
     //=============== searching ===============
     // 1. 原始数据流（来自数据库）
-    private val _allPdfs = repository.getAllPdfsFlow()
+    private val _allPdfsFlow = repository.getAllPdfsFlow()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     // 2. 搜索词状态
@@ -43,7 +45,7 @@ class MainViewModel(
     // 3. 核心：通过 combine 实时计算搜索结果
     val searchResult = _searchQuery
         .debounce(200) // 防抖，防止输入太快卡顿
-        .combine(_allPdfs) { query, allFiles ->
+        .combine(_allPdfsFlow) { query, allFiles ->
             if (query.isBlank()) {
                 emptyList() // 没输入时不显示结果
             } else {
@@ -193,5 +195,28 @@ class MainViewModel(
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
+    }
+
+
+    //=============== sort ===============
+    // 排序状态
+    private val _sortField = MutableStateFlow(SortField.DATE)
+    val sortField = _sortField.asStateFlow()
+
+    private val _sortOrder = MutableStateFlow(SortOrder.DESCENDING)
+    val sortOrder = _sortOrder.asStateFlow()
+
+    // 结合原始文件列表和排序状态
+    val sortedPdfFiles = combine(pdfFiles, _sortField, _sortOrder) { files, field, order ->
+        when (field) {
+            SortField.DATE -> if (order == SortOrder.ASCENDING) files.sortedBy { it.lastModified } else files.sortedByDescending { it.lastModified }
+            SortField.NAME -> if (order == SortOrder.ASCENDING) files.sortedBy { it.name.lowercase() } else files.sortedByDescending { it.name.lowercase() }
+            SortField.SIZE -> if (order == SortOrder.ASCENDING) files.sortedBy { it.size } else files.sortedByDescending { it.size }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun updateSortConfig(field: SortField, order: SortOrder) {
+        _sortField.value = field
+        _sortOrder.value = order
     }
 }

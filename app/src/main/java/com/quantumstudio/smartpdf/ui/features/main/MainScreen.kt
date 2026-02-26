@@ -43,6 +43,7 @@ import com.quantumstudio.smartpdf.ui.components.PdfDeleteDialog
 import com.quantumstudio.smartpdf.ui.components.PdfListItem
 import com.quantumstudio.smartpdf.ui.components.PdfRenameDialog
 import com.quantumstudio.smartpdf.ui.components.PermissionGuideScreen
+import com.quantumstudio.smartpdf.ui.components.SortByDialog
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsScreen
 import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
@@ -60,6 +61,25 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
     // 追踪当前打开的 PDF
     var activePdfUri by remember { mutableStateOf<Uri?>(null) }
 
+    //=============== sort ===============
+    // 1. 控制排序对话框显示的状态
+    var showSortDialog by remember { mutableStateOf(false) }
+    val currentField by viewModel.sortField.collectAsState()
+    val currentOrder by viewModel.sortOrder.collectAsState()
+
+    // 2. 渲染对话框（放在 Box 的底部即可）
+    if (showSortDialog) {
+        SortByDialog(
+            currentField = currentField,
+            currentOrder = currentOrder,
+            onDismiss = { showSortDialog = false },
+            onConfirm = { field, order ->
+                viewModel.updateSortConfig(field, order)
+                showSortDialog = false
+            }
+        )
+    }
+
     // 权限逻辑
     LaunchedEffect(Unit) { viewModel.checkPermission(context) }
     LaunchedEffect(viewModel.hasFileAccess) {
@@ -67,13 +87,12 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-
-
         Scaffold(
             topBar = {
                 if (viewModel.hasFileAccess) MainTopBar(
                     currentPage = pagerState.currentPage,
-                    onSearchClick = { isSearching = true }
+                    onSearchClick = { isSearching = true },
+                    onSortClick = { showSortDialog = true }
                 )
             },
             bottomBar = {
@@ -216,12 +235,14 @@ fun PdfListContent(
 // 关键点 4：所有的 Tab 都要接收并向下传递 onFileClick
 @Composable
 fun AllFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
-    val files by viewModel.pdfFiles.collectAsState()
+    // 改用 sortedPdfFiles，这样排序对话框确认后，这里会自动刷新
+    val files by viewModel.sortedPdfFiles.collectAsState()
     PdfListContent(files, viewModel, onFileClick)
 }
 
 @Composable
 fun RecentFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
+    // 最近阅读通常强制按时间排，不排序，保留原始流
     val files by viewModel.pdfFiles.collectAsState()
 
     // 过滤出阅读时间大于 0 的文件，并按时间倒序排列
@@ -235,7 +256,7 @@ fun RecentFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
 
 @Composable
 fun FavoriteFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
-    val files by viewModel.pdfFiles.collectAsState()
+    val files by viewModel.sortedPdfFiles.collectAsState()
     val favoriteFiles = remember(files) { files.filter { it.isFavorite } }
     PdfListContent(favoriteFiles, viewModel, onFileClick)
 }
@@ -249,7 +270,7 @@ fun AppBottomNavigation(currentPage: Int, onTabSelected: (Int) -> Unit) {
         "Settings" to Icons.Default.Settings
     )
 
-    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+    NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
         items.forEachIndexed { index, (label, icon) ->
             NavigationBarItem(
                 selected = currentPage == index,

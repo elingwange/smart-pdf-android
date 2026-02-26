@@ -63,10 +63,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.github.barteksc.pdfviewer.PDFView
+import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.ui.components.BottomActionIcon
 import com.quantumstudio.smartpdf.ui.components.BrightnessSliderLayout
 import com.quantumstudio.smartpdf.ui.components.ReaderMenuItem
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
+import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -94,7 +96,8 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
     var showInfoDialog by remember { mutableStateOf(false) }
     // 获取当前 PDF 对象以展示详细信息
     val pdfFiles by viewModel.pdfFiles.collectAsState()
-    val currentPdf = remember(pdfFiles, uri) { pdfFiles.find { it.path == uri.path } }
+    val currentPdf: PdfFile =
+        remember(pdfFiles, uri) { pdfFiles.find { it.path == uri.path } as PdfFile }
 
     // 自动初始化并实时跟随数据源：根据当前 URI 的路径查找其收藏状态
     val isFavorite = remember(pdfFiles, uri) {
@@ -266,7 +269,10 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                                 showMenu = false
                                 showInfoDialog = true
                             }
-                            ReaderMenuItem(Icons.Default.Share, "Share") { showMenu = false }
+                            ReaderMenuItem(Icons.Default.Share, "Share") {
+                                sharePdf(context, currentPdf)
+                                showMenu = false
+                            }
                             ReaderMenuItem(
                                 // 这里的 UI 显示是正确的，因为重组会更新它们
                                 icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,

@@ -29,14 +29,15 @@ private val DarkColorScheme = darkColorScheme(
 
 private val LightColorScheme = lightColorScheme(
     primary = PdfRed,
-    onPrimary = Color.White,
+    onPrimary = PdfBackgroundLight,
     background = PdfBackgroundLight,
     onBackground = Color.Black,
     surface = PdfSurfaceLight,
     onSurface = Color.Black,
 
     surfaceVariant = Color(0xFFF0F00),
-    onSurfaceVariant = Color(0xFF616161)
+    onSurfaceVariant = Color(0xFF616161),
+    outline = Color(0xFF757575)           // 边框或禁用色
 )
 
 @Composable
