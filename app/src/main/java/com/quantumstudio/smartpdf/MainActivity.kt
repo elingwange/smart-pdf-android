@@ -1,6 +1,8 @@
 package com.quantumstudio.smartpdf
 
+import android.animation.ObjectAnimator
 import android.os.Bundle
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,6 +11,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.animation.doOnEnd
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.lifecycle.ViewModelProvider
 import com.quantumstudio.smartpdf.data.local.PdfDatabase
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
@@ -27,7 +32,30 @@ class MainActivity : ComponentActivity() {
     private lateinit var viewModel: MainViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // ✨ 初始化启动页，它会自动处理展示和消失逻辑
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        // 如果你需要在这里进行一些预加载（比如初始化数据库），
+        // 可以让启动页多留一会儿：
+        // splashScreen.setKeepOnScreenCondition { viewModel.isLoading.value }
+        splashScreen.setOnExitAnimationListener { splashScreenView ->
+            // 创建向上平移的动画
+            val slideUp = ObjectAnimator.ofFloat(
+                splashScreenView.view,
+                View.TRANSLATION_Y,
+                0f,
+                -splashScreenView.view.height.toFloat() // 向上移动整个屏幕的高度
+            )
+
+            // ✨ 关键：使用 M3 风格的插值器，让动作更优雅
+            slideUp.interpolator = FastOutSlowInInterpolator()
+            slideUp.duration = 400L // 400ms 是最符合人体工学的动画时长
+
+            // 动画结束时移除启动页视图
+            slideUp.doOnEnd { splashScreenView.remove() }
+
+            slideUp.start()
+        }
 
         // 1. 初始化数据库和 Scanner
         val database = PdfDatabase.getDatabase(this) // 假设你有一个 Room 数据库类
