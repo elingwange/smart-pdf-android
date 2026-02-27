@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -55,7 +56,7 @@ fun BrightnessSliderLayout(activity: Activity?) {
             // 中间文字
             Text(
                 text = "Brightness",
-                color = Color(0xFF9999FF), // 使用你截图中的紫色
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f), // 使用你截图中的紫色
                 fontSize = 12.sp,
                 modifier = Modifier
                     .weight(1f)
@@ -85,8 +86,8 @@ fun BrightnessSliderLayout(activity: Activity?) {
             },
             // 定制滑块颜色，对齐 UI 设计
             colors = SliderDefaults.colors(
-                thumbColor = Color(0xFF9999FF),      // 滑块圆点颜色
-                activeTrackColor = Color(0xFF9999FF), // 已选中轨道颜色
+                thumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),      // 滑块圆点颜色
+                activeTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f), // 已选中轨道颜色
                 inactiveTrackColor = Color(0xFF333333) // 未选中轨道颜色（深灰）
             ),
             modifier = Modifier.fillMaxWidth()

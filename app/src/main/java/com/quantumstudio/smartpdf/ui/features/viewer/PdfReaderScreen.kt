@@ -1,8 +1,12 @@
+package com.quantumstudio.smartpdf.ui.features.viewer
+
+import PdfInfoDialog
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -19,29 +23,35 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.FindInPage
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,15 +68,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.github.barteksc.pdfviewer.PDFView
-import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.ui.components.BottomActionIcon
 import com.quantumstudio.smartpdf.ui.components.BrightnessSliderLayout
-import com.quantumstudio.smartpdf.ui.components.ReaderMenuItem
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
 import kotlinx.coroutines.delay
@@ -77,44 +88,33 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
     val context = LocalContext.current
     val activity = context as? Activity
 
-    // 1. 状态管理
-    var showMenu by remember { mutableStateOf(false) }
-    var isNightMode by rememberSaveable { mutableStateOf(false) }
+    // --- 1. 状态管理 ---
     var isUiVisible by rememberSaveable { mutableStateOf(true) }
+    var isNightMode by rememberSaveable { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
     var showBrightnessSlider by rememberSaveable { mutableStateOf(false) }
+    var showJumpLayout by rememberSaveable { mutableStateOf(false) }
+    var showInfoDialog by remember { mutableStateOf(false) }
 
     var lastLoadedUri by remember { mutableStateOf<Uri?>(null) }
     var currentPage by rememberSaveable { mutableStateOf(0) }
     var totalPages by rememberSaveable { mutableStateOf(0) }
+    var scrollProgress by remember { mutableStateOf(0f) }
     var pdfViewInstance by remember { mutableStateOf<PDFView?>(null) }
 
-    val screenHeightPx =
-        with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
-
-    // --- 状态绑定 ---
-    // pdf info dialog
-    var showInfoDialog by remember { mutableStateOf(false) }
-    // 获取当前 PDF 对象以展示详细信息
+    // --- 2. 数据绑定 ---
     val pdfFiles by viewModel.pdfFiles.collectAsState()
-    val currentPdf: PdfFile =
-        remember(pdfFiles, uri) { pdfFiles.find { it.path == uri.path } as PdfFile }
+    val currentPdf = remember(pdfFiles, uri) { pdfFiles.find { it.path == uri.path } }
+    val isFavorite = currentPdf?.isFavorite ?: false
 
-    // 自动初始化并实时跟随数据源：根据当前 URI 的路径查找其收藏状态
-    val isFavorite = remember(pdfFiles, uri) {
-        pdfFiles.find { it.path == uri.path }?.isFavorite ?: false
-    }
-
-    // 控制显隐逻辑：页码指示器
+    // 页码指示器动画逻辑
     var isPageIndicatorVisible by remember { mutableStateOf(false) }
-    // 修改：让初始值也作为信号的一部分，或者手动触发一次
     var scrollSignal by remember { mutableStateOf(System.currentTimeMillis()) }
 
-    // 只要 scrollSignal 变动，就重新计时
     LaunchedEffect(scrollSignal) {
-        // 只有总页数已知时才执行，避免初始加载时的空白闪烁
         if (totalPages > 0) {
             isPageIndicatorVisible = true
-            delay(1300)
+            delay(1500)
             isPageIndicatorVisible = false
         }
     }
@@ -124,16 +124,19 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // 1. PDF 内容层
+        // --- 3. PDF 内容层 ---
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 PDFView(ctx, null).apply {
                     setOnClickListener {
                         isUiVisible = !isUiVisible
-                        if (!isUiVisible) showBrightnessSlider = false
+                        if (!isUiVisible) {
+                            showBrightnessSlider = false
+                            showJumpLayout = false
+                        }
                     }
                     pdfViewInstance = this
                 }
@@ -146,17 +149,15 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                         .onPageChange { page, count ->
                             currentPage = page
                             totalPages = count
-                            // 增加：页码改变也算滑动信号，触发倒计时
+                        }
+                        .onPageScroll { page, positionOffset ->
+                            if (totalPages > 1) {
+                                scrollProgress =
+                                    (page + positionOffset) / (totalPages - 1).toFloat()
+                            }
                             scrollSignal = System.currentTimeMillis()
                         }
-                        .onPageScroll { _, _ ->
-                            // 滑动位移触发信号
-                            scrollSignal = System.currentTimeMillis()
-                        }
-                        .onLoad {
-                            // 文件加载成功，记录为最近阅读
-                            viewModel.markAsRead(uri.path ?: "")
-                        }
+                        .onLoad { viewModel.markAsRead(uri.path ?: "") }
                         .load()
                     lastLoadedUri = uri
                 } else {
@@ -165,46 +166,37 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
             }
         )
 
-        // 2. 右侧页码标识 (自动显隐动画)
-        Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+        // --- 4. 平滑滚动指示器 (品牌红) ---
+        val screenHeightPx =
+            with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
+        // 1. 在这里定义 dragRange，确保它在下面的所有块中都可用
+        val dragRange = screenHeightPx * 0.7f
+        Box(modifier = Modifier.align(Alignment.CenterEnd)) {// 2. 使用 scrollProgress 计算实时偏移
+            val yOffsetPx = scrollProgress * dragRange
             AnimatedVisibility(
                 visible = isPageIndicatorVisible,
-                // 从右侧切入切出
                 enter = fadeIn() + slideInHorizontally { it },
-                exit = fadeOut() + slideOutHorizontally { it }
-            ) {
-                val dragRange = screenHeightPx * 0.6f
-                val yOffsetPx =
-                    (currentPage.toFloat() / (totalPages - 1).coerceAtLeast(1)) * dragRange
-
+                exit = fadeOut() + slideOutHorizontally { it }) {
+                val dragRange = screenHeightPx * 0.7f
+                val yOffsetPx = scrollProgress * dragRange
                 Box(
                     modifier = Modifier
-                        .offset {
-                            IntOffset(
-                                0,
-                                yOffsetPx.roundToInt() - (dragRange / 2).roundToInt()
-                            )
-                        }
-                        .padding(end = 1.dp)
-                        .size(45.dp, 30.dp)
+                        .offset { IntOffset(0, (yOffsetPx - dragRange / 2).roundToInt()) }
+                        .size(50.dp, 32.dp)
                         .background(
-                            color = Color(0xFF9999FF),
-                            // 关键：只设置左侧的圆角 (TopStart 和 BottomStart)
-                            shape = RoundedCornerShape(
-                                topStart = 18.dp,
-                                bottomStart = 18.dp,
-                                topEnd = 0.dp,
-                                bottomEnd = 0.dp
-                            )
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                            RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
                         )
                         .draggable(
                             orientation = Orientation.Vertical,
                             state = rememberDraggableState { delta ->
-                                // 拖动时同步更新信号，防止拖动过程中标识突然消失
-                                scrollSignal = System.currentTimeMillis()
-                                val pageDelta = (delta / dragRange) * totalPages
-                                val targetPage = (currentPage + pageDelta).roundToInt()
-                                    .coerceIn(0, totalPages - 1)
+                                // ✨ 这里现在可以安全引用外部的 dragRange 了
+                                val newProgress =
+                                    (scrollProgress + delta / dragRange).coerceIn(0f, 1f)
+                                scrollProgress = newProgress
+
+                                // 计算目标页码并跳转
+                                val targetPage = (newProgress * (totalPages - 1)).roundToInt()
                                 if (targetPage != currentPage) {
                                     pdfViewInstance?.jumpTo(targetPage)
                                 }
@@ -212,18 +204,17 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    // 文字稍微向左偏移一点点，视觉上更居中（因为右侧贴边了）
                     Text(
-                        text = "${currentPage + 1}",
+                        "${currentPage + 1}",
                         color = Color.White,
-                        fontSize = 15.sp,
-                        modifier = Modifier.padding(end = 2.dp)
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
                     )
                 }
             }
         }
 
-        // 3. 头部导航栏 (逻辑保持不变)
+        // --- 5. 顶部导航栏 ---
         AnimatedVisibility(
             visible = isUiVisible,
             enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
@@ -232,130 +223,165 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
         ) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color.Black.copy(alpha = 0.9f)
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                tonalElevation = 4.dp
             ) {
                 Row(
                     modifier = Modifier
                         .statusBarsPadding()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.Default.ArrowBackIosNew,
                             "Back",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     Text(
-                        text = uri.lastPathSegment ?: "PDF Reader",
-                        color = Color.White,
-                        fontSize = 16.sp,
+                        uri.lastPathSegment ?: "Reader",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
                         maxLines = 1,
-                        modifier = Modifier.weight(1f)
+                        overflow = TextOverflow.Ellipsis
                     )
-                    // ... DropdownMenu 部分保持不变 ...
-                    Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, "More", tint = Color.White)
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                            modifier = Modifier.background(Color(0xFF222222))
-                        ) {
-                            ReaderMenuItem(Icons.Default.Info, "Info") {
-                                showMenu = false
-                                showInfoDialog = true
-                            }
-                            ReaderMenuItem(Icons.Default.Share, "Share") {
-                                sharePdf(context, currentPdf)
-                                showMenu = false
-                            }
-                            ReaderMenuItem(
-                                // 这里的 UI 显示是正确的，因为重组会更新它们
-                                icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                label = if (isFavorite) "Remove from favorites" else "Add to favorites",
-                                tint = if (isFavorite) Color(0xFF9999FF) else Color.White
-                            ) {
-                                val path = uri.path ?: ""
-                                if (path.isNotEmpty()) {
-                                    // 逻辑修复：先保存当前状态，用于判断提示语
-                                    val willBeFavorite = !isFavorite
-
-                                    // 1. 调用 ViewModel 更新（内存+数据库）
-                                    viewModel.toggleFavorite(path)
-
-                                    // 2. 弹出提示：使用 willBeFavorite 确保提示语与动作一致
-                                    val message =
-                                        if (willBeFavorite) "Added to favorites" else "Removed from favorites"
-                                    android.widget.Toast.makeText(
-                                        context,
-                                        message,
-                                        android.widget.Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                                showMenu = false
-                            }
-                            ReaderMenuItem(Icons.Default.Delete, "Delete") { showMenu = false }
-                        }
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            "More",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Info") },
+                            leadingIcon = { Icon(Icons.Default.Info, null) },
+                            onClick = { showMenu = false; showInfoDialog = true })
+                        DropdownMenuItem(
+                            text = { Text("Share") },
+                            leadingIcon = { Icon(Icons.Default.Share, null) },
+                            onClick = {
+                                currentPdf?.let { sharePdf(context, it) }; showMenu = false
+                            })
                     }
                 }
             }
         }
 
-        // --- Info对话框渲染 ---
-        if (showInfoDialog && currentPdf != null) {
-            PdfInfoDialog(
-                pdf = currentPdf,
-                onDismiss = { showInfoDialog = false }
-            )
-        }
-
-        // 4. 底部菜单 (增加旋转强制刷新)
+        // --- 6. 底部操作面板 (核心整合) ---
         AnimatedVisibility(
             visible = isUiVisible,
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            Surface(modifier = Modifier.fillMaxWidth(), color = Color.Black.copy(alpha = 0.9f)) {
-                Column {
+            Surface(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                tonalElevation = 8.dp
+            ) {
+                Column(modifier = Modifier.animateContentSize()) {
                     if (showBrightnessSlider) {
                         BrightnessSliderLayout(activity)
+                    } else if (showJumpLayout) {
+                        JumpPageLayout(currentPage, totalPages) { targetPage ->
+                            pdfViewInstance?.jumpTo(targetPage)
+                            showJumpLayout = false
+                        }
                     }
+
                     Row(
                         modifier = Modifier
                             .navigationBarsPadding()
-                            .padding(vertical = 12.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        BottomActionIcon(Icons.Default.ScreenRotation, onClick = {
+                        BottomActionIcon(Icons.Default.ScreenRotation) {
                             activity?.let {
-                                lastLoadedUri = null // ✨ 旋转时清空缓存，强制 AndroidView 重新 load()
+                                lastLoadedUri = null
                                 it.requestedOrientation =
-                                    if (it.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
-                                        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                                    } else {
-                                        ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                                    }
+                                    if (it.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                             }
-                        })
+                        }
+                        BottomActionIcon(if (isNightMode) Icons.Default.LightMode else Icons.Default.DarkMode) {
+                            isNightMode = !isNightMode; lastLoadedUri = null
+                        }
+
+                        // 亮度开关
                         BottomActionIcon(
-                            icon = if (isNightMode) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            onClick = { isNightMode = !isNightMode; lastLoadedUri = null }
-                        )
+                            icon = Icons.Default.WbSunny,
+                            tint = if (showBrightnessSlider) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        ) { showBrightnessSlider = !showBrightnessSlider; showJumpLayout = false }
+
+                        // 跳转开关 (语义化图标更新)
                         BottomActionIcon(
-                            Icons.Default.WbSunny,
-                            onClick = { showBrightnessSlider = !showBrightnessSlider })
-                        BottomActionIcon(Icons.Default.TouchApp)
-                        BottomActionIcon(Icons.Default.KeyboardDoubleArrowDown)
+                            icon = Icons.Default.FindInPage,
+                            tint = if (showJumpLayout) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        ) { showJumpLayout = !showJumpLayout; showBrightnessSlider = false }
+                        
+                        // 收藏按钮
+                        BottomActionIcon(
+                            icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        ) { viewModel.toggleFavorite(uri.path ?: "") }
                     }
                 }
             }
+        }
+
+        if (showInfoDialog && currentPdf != null) PdfInfoDialog(currentPdf) {
+            showInfoDialog = false
+        }
+    }
+}
+
+@Composable
+fun JumpPageLayout(currentPage: Int, totalPages: Int, onConfirm: (Int) -> Unit) {
+    var textValue by remember { mutableStateOf((currentPage + 1).toString()) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp, 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            "Total: $totalPages",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        OutlinedTextField(
+            value = textValue,
+            onValueChange = { if (it.all { c -> c.isDigit() }) textValue = it },
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp)
+                .height(50.dp),
+            shape = RoundedCornerShape(25.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+            )
+        )
+        Button(
+            onClick = {
+                textValue.toIntOrNull()?.minus(1)
+                    ?.let { if (it in 0 until totalPages) onConfirm(it) }
+            },
+            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
+            Text("Go", color = Color.White)
         }
     }
 }

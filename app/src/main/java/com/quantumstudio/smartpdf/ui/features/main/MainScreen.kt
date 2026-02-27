@@ -1,7 +1,6 @@
 package com.quantumstudio.smartpdf.ui.features.main
 
 import PdfInfoDialog
-import PdfReaderScreen
 import SearchScreen
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
@@ -45,6 +44,7 @@ import com.quantumstudio.smartpdf.ui.components.PdfRenameDialog
 import com.quantumstudio.smartpdf.ui.components.PermissionGuideScreen
 import com.quantumstudio.smartpdf.ui.components.SortByDialog
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsScreen
+import com.quantumstudio.smartpdf.ui.features.viewer.PdfReaderScreen
 import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
 import kotlinx.coroutines.launch
