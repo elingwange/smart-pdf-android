@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -71,6 +72,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,6 +80,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.github.barteksc.pdfviewer.PDFView
 import com.quantumstudio.smartpdf.ui.components.BottomActionIcon
 import com.quantumstudio.smartpdf.ui.components.BrightnessSliderLayout
+import com.quantumstudio.smartpdf.ui.components.JumpPageLayout
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
 import kotlinx.coroutines.delay
@@ -246,28 +249,34 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            "More",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    Box(
+                        modifier = Modifier.wrapContentSize(Alignment.TopEnd) // 强制 Box 内容向右上角对齐
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Info") },
-                            leadingIcon = { Icon(Icons.Default.Info, null) },
-                            onClick = { showMenu = false; showInfoDialog = true })
-                        DropdownMenuItem(
-                            text = { Text("Share") },
-                            leadingIcon = { Icon(Icons.Default.Share, null) },
-                            onClick = {
-                                currentPdf?.let { sharePdf(context, it) }; showMenu = false
-                            })
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                "More",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            // ✨ 增加偏移量，确保它从图标正下方偏右的位置弹出
+                            offset = DpOffset(x = (0).dp, y = 0.dp),
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Info") },
+                                leadingIcon = { Icon(Icons.Default.Info, null) },
+                                onClick = { showMenu = false; showInfoDialog = true })
+                            DropdownMenuItem(
+                                text = { Text("Share") },
+                                leadingIcon = { Icon(Icons.Default.Share, null) },
+                                onClick = {
+                                    currentPdf?.let { sharePdf(context, it) }; showMenu = false
+                                })
+                        }
                     }
                 }
             }
@@ -327,7 +336,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                             icon = Icons.Default.FindInPage,
                             tint = if (showJumpLayout) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         ) { showJumpLayout = !showJumpLayout; showBrightnessSlider = false }
-                        
+
                         // 收藏按钮
                         BottomActionIcon(
                             icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
