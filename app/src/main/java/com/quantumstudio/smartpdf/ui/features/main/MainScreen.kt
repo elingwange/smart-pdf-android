@@ -35,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.ui.components.MenuAction
 import com.quantumstudio.smartpdf.ui.components.PdfDeleteDialog
@@ -44,30 +43,35 @@ import com.quantumstudio.smartpdf.ui.components.PdfRenameDialog
 import com.quantumstudio.smartpdf.ui.components.PermissionGuideScreen
 import com.quantumstudio.smartpdf.ui.components.SortByDialog
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsScreen
-import com.quantumstudio.smartpdf.ui.features.viewer.PdfReaderScreen
 import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
 import kotlinx.coroutines.launch
+import java.io.File
 
 @Composable
-fun MainScreen(viewModel: MainViewModel = viewModel()) {
+fun MainScreen(
+    viewModel: MainViewModel,
+    onNavigateToReader: (Uri) -> Unit // ✨ 关键：接收外部导航回调
+) {
     val context = LocalContext.current
     val pagerState = rememberPagerState(pageCount = { 4 })
     val scope = rememberCoroutineScope()
 
-    // --- 新增：控制搜索界面的状态 ---
+    // 控制搜索界面的状态
     var isSearching by remember { mutableStateOf(false) }
 
-    // 追踪当前打开的 PDF
-    var activePdfUri by remember { mutableStateOf<Uri?>(null) }
-
-    //=============== sort ===============
-    // 1. 控制排序对话框显示的状态
+    // 控制排序对话框状态
     var showSortDialog by remember { mutableStateOf(false) }
     val currentField by viewModel.sortField.collectAsState()
     val currentOrder by viewModel.sortOrder.collectAsState()
 
-    // 2. 渲染对话框（放在 Box 的底部即可）
+    // 权限与扫描逻辑
+    LaunchedEffect(Unit) { viewModel.checkPermission(context) }
+    LaunchedEffect(viewModel.hasFileAccess) {
+        if (viewModel.hasFileAccess) viewModel.scanPdfs(context)
+    }
+
+    // 渲染排序对话框
     if (showSortDialog) {
         SortByDialog(
             currentField = currentField,
@@ -78,12 +82,6 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                 showSortDialog = false
             }
         )
-    }
-
-    // 权限逻辑
-    LaunchedEffect(Unit) { viewModel.checkPermission(context) }
-    LaunchedEffect(viewModel.hasFileAccess) {
-        if (viewModel.hasFileAccess) viewModel.scanPdfs(context)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -99,7 +97,9 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                 if (viewModel.hasFileAccess) {
                     AppBottomNavigation(
                         currentPage = pagerState.currentPage,
-                        onTabSelected = { index -> scope.launch { pagerState.scrollToPage(index) } }
+                        onTabSelected = { index ->
+                            scope.launch { pagerState.scrollToPage(index) }
+                        }
                     )
                 }
             }
@@ -110,15 +110,17 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     .fillMaxSize()
             ) {
                 if (!viewModel.hasFileAccess) {
-                    PermissionGuideScreen(onGrantClick = { CommonUtils.requestAllFilesAccess(context) })
+                    PermissionGuideScreen(onGrantClick = {
+                        CommonUtils.requestAllFilesAccess(context)
+                    })
                 } else {
                     HorizontalPager(
                         state = pagerState,
                         userScrollEnabled = false,
                         beyondViewportPageCount = 3
                     ) { pageIndex ->
-                        // 关键点 1：在这里定义点击后的逻辑
-                        val onFileClick: (Uri) -> Unit = { uri -> activePdfUri = uri }
+                        // ✨ 统一点击逻辑：调用导航回调
+                        val onFileClick: (Uri) -> Unit = { uri -> onNavigateToReader(uri) }
 
                         when (pageIndex) {
                             0 -> AllFilesTab(viewModel, onFileClick)
@@ -131,7 +133,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             }
         }
 
-
+        // 搜索图层
         if (isSearching) {
             SearchScreen(
                 viewModel = viewModel,
@@ -141,22 +143,15 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                 },
                 onFileClick = { pdf ->
                     isSearching = false
-                    // 关闭搜索后，清空搜索词，防止下次进入还显示结果
                     viewModel.onQueryChange("")
-                    activePdfUri = Uri.fromFile(java.io.File(pdf.path))
+                    // ✨ 搜索结果也通过导航跳转
+                    onNavigateToReader(Uri.fromFile(File(pdf.path)))
                 }
             )
         }
-
-        // PDF 预览层（盖在最上面）
-        activePdfUri?.let { uri ->
-            PdfReaderScreen(uri = uri, onBack = { activePdfUri = null }, viewModel = viewModel)
-        }
-
     }
 }
 
-// 关键点 2：PdfListContent 必须声明接收这个函数参数
 @Composable
 fun PdfListContent(
     files: List<PdfFile>,
@@ -164,15 +159,10 @@ fun PdfListContent(
     onFileClick: (Uri) -> Unit
 ) {
     val context = LocalContext.current
-    // 状态定义（正确）
     var selectedPdfForInfo by remember { mutableStateOf<PdfFile?>(null) }
-    // 新增：用于删除确认的状态
     var pdfToDelete by remember { mutableStateOf<PdfFile?>(null) }
-
     var pdfToRename by remember { mutableStateOf<PdfFile?>(null) }
 
-
-    // 修改：增加 Box 以便 Dialog 能够正确弹出
     Box(modifier = Modifier.fillMaxSize()) {
         if (files.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -183,10 +173,10 @@ fun PdfListContent(
                 items(items = files, key = { it.path }) { pdf ->
                     PdfListItem(
                         pdf = pdf,
-                        onClick = { onFileClick(Uri.fromFile(java.io.File(pdf.path))) },
+                        onClick = { onFileClick(Uri.fromFile(File(pdf.path))) },
                         onMenuAction = { action ->
                             when (action) {
-                                is MenuAction.Info -> selectedPdfForInfo = pdf // 赋值（正确）
+                                is MenuAction.Info -> selectedPdfForInfo = pdf
                                 is MenuAction.Favorite -> viewModel.toggleFavorite(pdf.path)
                                 is MenuAction.Rename -> pdfToRename = pdf
                                 is MenuAction.Delete -> pdfToDelete = pdf
@@ -199,21 +189,17 @@ fun PdfListContent(
             }
         }
 
-        // 关键修复：添加这一段代码，让 Dialog 真正渲染出来
+        // 弹窗逻辑
         selectedPdfForInfo?.let { pdf ->
-            PdfInfoDialog(
-                pdf = pdf,
-                onDismiss = { selectedPdfForInfo = null }
-            )
+            PdfInfoDialog(pdf = pdf, onDismiss = { selectedPdfForInfo = null })
         }
 
-        // 添加删除弹窗
         pdfToDelete?.let { pdf ->
             PdfDeleteDialog(
                 fileName = pdf.name,
                 onDismiss = { pdfToDelete = null },
                 onConfirm = {
-                    viewModel.deleteFile(pdf, context) // 执行删除
+                    viewModel.deleteFile(pdf, context)
                     pdfToDelete = null
                 }
             )
@@ -232,26 +218,12 @@ fun PdfListContent(
     }
 }
 
-// 关键点 4：所有的 Tab 都要接收并向下传递 onFileClick
+// --- Tabs 实现保持简洁，统一向下传递回调 ---
+
 @Composable
 fun AllFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
-    // 改用 sortedPdfFiles，这样排序对话框确认后，这里会自动刷新
     val files by viewModel.sortedPdfFiles.collectAsState()
     PdfListContent(files, viewModel, onFileClick)
-}
-
-@Composable
-fun RecentFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
-    // 最近阅读通常强制按时间排，不排序，保留原始流
-    val files by viewModel.pdfFiles.collectAsState()
-
-    // 过滤出阅读时间大于 0 的文件，并按时间倒序排列
-    val recentFiles = remember(files) {
-        files.filter { it.lastReadTime > 0 }
-            .sortedByDescending { it.lastReadTime }
-    }
-
-    PdfListContent(recentFiles, viewModel, onFileClick)
 }
 
 @Composable
@@ -262,12 +234,21 @@ fun FavoriteFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
 }
 
 @Composable
+fun RecentFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
+    val files by viewModel.pdfFiles.collectAsState()
+    val recentFiles = remember(files) {
+        files.filter { it.lastReadTime > 0 }.sortedByDescending { it.lastReadTime }
+    }
+    PdfListContent(recentFiles, viewModel, onFileClick)
+}
+
+@Composable
 fun AppBottomNavigation(currentPage: Int, onTabSelected: (Int) -> Unit) {
     val items = listOf(
-        "All Files" to Icons.Default.Home,
-        "Favorite" to Icons.Default.Favorite,
+        "Home" to Icons.Default.Home,
+        "Fav" to Icons.Default.Favorite,
         "Recent" to Icons.Default.History,
-        "Settings" to Icons.Default.Settings
+        "Set" to Icons.Default.Settings
     )
 
     NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
@@ -275,15 +256,12 @@ fun AppBottomNavigation(currentPage: Int, onTabSelected: (Int) -> Unit) {
             NavigationBarItem(
                 selected = currentPage == index,
                 onClick = { onTabSelected(index) },
-                icon = { Icon(icon, contentDescription = null) },
+                icon = { Icon(icon, null) },
                 label = { Text(label, fontSize = 10.sp) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.primary,
                     selectedTextColor = MaterialTheme.colorScheme.primary,
-                    // onSurfaceVariant亮度刚好，不刺眼也不模糊
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = Color.Transparent // 保持透明偏好
+                    indicatorColor = Color.Transparent
                 )
             )
         }

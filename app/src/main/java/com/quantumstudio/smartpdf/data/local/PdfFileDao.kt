@@ -9,6 +9,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PdfFileDao {
+    // ✨ 必须添加：根据路径查询单个 PDF
+    @Query("SELECT * FROM pdf_files WHERE path = :path LIMIT 1")
+    suspend fun getPdfByPath(path: String): PdfFile?
+    
     // 修改：由 REPLACE 改为 IGNORE
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(pdfs: List<PdfFile>)
@@ -22,7 +26,6 @@ interface PdfFileDao {
     @Query("DELETE FROM pdf_files")
     suspend fun deleteAll()
 
-    // 更新最后阅读时间
     @Query("UPDATE pdf_files SET lastReadTime = :timestamp WHERE path = :path")
     suspend fun updateLastReadTime(path: String, timestamp: Long)
 
@@ -35,4 +38,9 @@ interface PdfFileDao {
 
     @Query("SELECT * FROM pdf_files ORDER BY lastModified DESC")
     fun getAllPdfsFlow(): Flow<List<PdfFile>> // 移除 suspend，返回 Flow
+
+    @Query("UPDATE pdf_files SET currentPage = :page, lastReadTime = :timestamp WHERE path = :path")
+    suspend fun updatePageProgress(path: String, page: Int, timestamp: Long)
+
+
 }

@@ -16,6 +16,7 @@ import com.quantumstudio.smartpdf.data.model.SortField
 import com.quantumstudio.smartpdf.data.model.SortOrder
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
 import com.quantumstudio.smartpdf.data.repository.ThemeRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,13 +30,13 @@ enum class ThemeMode {
 }
 
 class MainViewModel(
-    private val repository: PdfRepository,
+    private val pdfRepository: PdfRepository,
     private val themeRepository: ThemeRepository
 ) : ViewModel() {
 
     //=============== searching ===============
     // 1. 原始数据流（来自数据库）
-    private val _allPdfsFlow = repository.getAllPdfsFlow()
+    private val _allPdfsFlow = pdfRepository.getAllPdfsFlow()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     // 2. 搜索词状态
@@ -67,6 +68,36 @@ class MainViewModel(
         initialValue = ThemeMode.SYSTEM
     )
 
+    // ✨ 进入阅读器时强制检查一次
+    fun ensurePdfExists(path: String) {
+        viewModelScope.launch {
+            pdfRepository.getOrInsertPdf(path)
+            // 执行后，Flow 会自动感知数据库变化并刷新 UI
+        }
+    }
+
+    // 存储当前正在阅读的文件状态（单点精准观察）
+    var currentReadingPdf by mutableStateOf<PdfFile?>(null)
+        private set
+
+    fun loadPdfForReader(path: String) {
+        viewModelScope.launch {
+            // 1. 强制去数据库里查（或补录）
+            val pdf = pdfRepository.getOrInsertPdf(path)
+            // 2. 更新这个单点状态
+            currentReadingPdf = pdf
+            android.util.Log.d("PDF_TRACE", "单点加载完成：${pdf?.name}, 进度: ${pdf?.currentPage}")
+        }
+    }
+
+    fun updateProgress(path: String, page: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // 这里的顺序很重要：先确保有记录，再更新进度
+            pdfRepository.getOrInsertPdf(path)
+            pdfRepository.updateProgress(path, page)
+        }
+    }
+
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             themeRepository.saveThemeMode(mode)
@@ -96,7 +127,7 @@ class MainViewModel(
     fun scanPdfs(context: Context) {
         if (!hasFileAccess) return
         viewModelScope.launch {
-            val scanned = repository.getAllPdfs(context)
+            val scanned = pdfRepository.getAllPdfs(context)
 //            _pdfFiles.clear()
 //            _pdfFiles.addAll(scanned)
             // 直接发出新的 List 即可触发 UI 更新
@@ -117,14 +148,14 @@ class MainViewModel(
             }
 
             // 3. 异步持久化到数据库
-            repository.toggleFavorite(path, newStatus)
+            pdfRepository.toggleFavorite(path, newStatus)
         }
     }
 
     fun markAsRead(path: String) {
         viewModelScope.launch {
             // 1. 持久化到数据库
-            repository.markAsRead(path)
+            pdfRepository.markAsRead(path)
 
             // 2. 更新内存状态，确保 UI 刷新
             _pdfFiles.value = _pdfFiles.value.map { pdf ->
@@ -135,7 +166,7 @@ class MainViewModel(
 
     fun deleteFile(pdf: PdfFile, context: android.content.Context) {
         viewModelScope.launch {
-            val success = repository.deletePdfFile(pdf)
+            val success = pdfRepository.deletePdfFile(pdf)
             if (success) {
                 // 1. 更新内存中的列表，让 UI 立即刷新
                 _pdfFiles.value = _pdfFiles.value.filter { it.path != pdf.path }
@@ -163,7 +194,7 @@ class MainViewModel(
 
     fun renameFile(pdf: PdfFile, newName: String, context: android.content.Context) {
         viewModelScope.launch {
-            val updatedPdf = repository.renamePdfFile(pdf, newName)
+            val updatedPdf = pdfRepository.renamePdfFile(pdf, newName)
             if (updatedPdf != null) {
                 // 更新 UI 列表：替换掉旧对象
                 _pdfFiles.value = _pdfFiles.value.map {

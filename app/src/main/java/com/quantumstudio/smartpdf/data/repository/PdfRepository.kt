@@ -1,12 +1,15 @@
 package com.quantumstudio.smartpdf.data.repository
 
 import android.content.Context
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
 import com.quantumstudio.smartpdf.data.local.PdfFileDao
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.data.scanner.PdfScanner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import java.io.File
 
 class PdfRepository(
     private val pdfFileDao: PdfFileDao
@@ -41,7 +44,7 @@ class PdfRepository(
 
     suspend fun deletePdfFile(pdf: PdfFile): Boolean = withContext(Dispatchers.IO) {
         try {
-            val file = java.io.File(pdf.path)
+            val file = File(pdf.path)
             // 1. 执行物理删除
             val deleted = if (file.exists()) file.delete() else true
 
@@ -59,9 +62,9 @@ class PdfRepository(
     suspend fun renamePdfFile(pdf: PdfFile, newName: String): PdfFile? =
         withContext(Dispatchers.IO) {
             try {
-                val oldFile = java.io.File(pdf.path)
-                val newPath = oldFile.parent + java.io.File.separator + newName
-                val newFile = java.io.File(newPath)
+                val oldFile = File(pdf.path)
+                val newPath = oldFile.parent + File.separator + newName
+                val newFile = File(newPath)
 
                 if (oldFile.renameTo(newFile)) {
                     // ✨ 数据库处理：因为 path 是主键，必须先删后插
@@ -81,5 +84,53 @@ class PdfRepository(
      */
     fun getAllPdfsFlow(): Flow<List<PdfFile>> {
         return pdfFileDao.getAllPdfsFlow()
+    }
+
+    // ✨ 新增：更新阅读进度（页码 + 时间戳）
+    suspend fun updateProgress(path: String, page: Int) {
+        val timestamp = System.currentTimeMillis()
+        pdfFileDao.updatePageProgress(path, page, timestamp)
+    }
+
+    // ✨ 核心补全：确保数据库里一定有这个文件
+    suspend fun getOrInsertPdf(path: String): PdfFile? = withContext(Dispatchers.IO) {
+        // 1. 先查数据库
+        var pdf = pdfFileDao.getPdfByPath(path)
+
+        if (pdf == null) {
+            val file = File(path)
+            if (file.exists()) {
+                // 2. 获取 PDF 真实页数 (关键步骤)
+                val pageCount = getPdfPageCount(file)
+
+                pdf = PdfFile(
+                    path = path,
+                    name = file.name,
+                    size = file.length(),
+                    lastModified = file.lastModified(),
+                    currentPage = 0,
+                    lastReadTime = System.currentTimeMillis(),
+                    pages = pageCount
+                )
+                // 3. 插入数据库
+                pdfFileDao.insertAll(listOf(pdf))
+                pdf = pdfFileDao.getPdfByPath(path)
+            }
+        }
+        pdf
+    }
+
+    // 辅助函数：通过原生 Renderer 获取页数
+    private fun getPdfPageCount(file: File): Int {
+        return try {
+            val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+            val renderer = PdfRenderer(pfd)
+            val count = renderer.pageCount
+            renderer.close()
+            pfd.close()
+            count
+        } catch (e: Exception) {
+            0 // 如果读取失败，默认返回 0
+        }
     }
 }
