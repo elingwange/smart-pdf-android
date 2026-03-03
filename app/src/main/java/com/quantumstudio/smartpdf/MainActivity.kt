@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // 1. 初始化 ViewModel (保持你原有的 Factory 逻辑)
+        // 1. 初始化 ViewModel
         val database = PdfDatabase.getDatabase(this)
         val pdfRepository = PdfRepository(database.pdfFileDao())
         val themeRepository = ThemeRepository(applicationContext)
@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
             MainViewModel.Factory(pdfRepository, themeRepository)
         )[MainViewModel::class.java]
 
-        // 2. 启动页退出动画 (保持原有逻辑)
+        // 2. 启动页退出动画
         splashScreen.setOnExitAnimationListener { splashScreenView ->
             val slideUp = ObjectAnimator.ofFloat(
                 splashScreenView.view,

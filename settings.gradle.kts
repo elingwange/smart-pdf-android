@@ -20,7 +20,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SmartPDF"
+rootProject.name = "Smart PDF"
 include(":app")
 include(":android-pdf-viewer")
  

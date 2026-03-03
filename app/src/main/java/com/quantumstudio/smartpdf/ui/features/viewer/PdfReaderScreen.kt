@@ -87,7 +87,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
     val context = LocalContext.current
     val activity = context as? Activity
 
-// 1. 路径清洗
+    // 1. 路径清洗
     val pdfPath = remember(uri) {
         val rawPath = uri.path ?: ""
         if (rawPath.startsWith("/file")) rawPath.substring(5) else rawPath
@@ -121,6 +121,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
     // 5. 状态派生（此时 currentPdf 绝对不为空）
     val isFavorite = currentPdf.isFavorite
     val initialPage = currentPdf.currentPage
+
 
     // --- 2. 状态管理 ---
     var isFirstLoad by remember { mutableStateOf(true) }
@@ -285,7 +286,6 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                     )
                     // ✨ 修改这里：创建一个 Box 作为锚点
                     Box {
-
                         IconButton(onClick = { showMenu = true }) {
                             Icon(
                                 Icons.Default.MoreVert,
@@ -299,7 +299,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                                 onClick = { showMenu = false; showInfoDialog = true }
                             )
                             DropdownMenuItem(
-                                text = { Text("Add Shortcut") },
+                                text = { Text("Add to Home Screen") },
                                 leadingIcon = { Icon(Icons.Default.AddHome, null) },
                                 onClick = {
                                     showMenu = false
@@ -381,7 +381,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                                 showJumpLayout = false
                             }
                         )
-
+    
                         // 跳转按钮
                         BottomActionIcon(
                             icon = Icons.Default.FindInPage,
