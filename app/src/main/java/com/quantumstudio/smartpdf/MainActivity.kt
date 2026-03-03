@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -18,39 +19,28 @@ import androidx.compose.ui.Modifier
 import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
-import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.quantumstudio.smartpdf.data.local.PdfDatabase
-import com.quantumstudio.smartpdf.data.repository.PdfRepository
-import com.quantumstudio.smartpdf.data.repository.ThemeRepository
 import com.quantumstudio.smartpdf.ui.features.main.MainScreen
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.viewer.PdfReaderScreen
 import com.quantumstudio.smartpdf.ui.theme.SmartPDFTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    private lateinit var viewModel: MainViewModel
+    private val viewModel: MainViewModel by viewModels()
     private var navController: NavHostController? = null // ✨ 定义导航控制器
 
     @RequiresApi(Build.VERSION_CODES.N_MR1)
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
-
-        // 1. 初始化 ViewModel
-        val database = PdfDatabase.getDatabase(this)
-        val pdfRepository = PdfRepository(database.pdfFileDao())
-        val themeRepository = ThemeRepository(applicationContext)
-        viewModel = ViewModelProvider(
-            this,
-            MainViewModel.Factory(pdfRepository, themeRepository)
-        )[MainViewModel::class.java]
 
         // 2. 启动页退出动画
         splashScreen.setOnExitAnimationListener { splashScreenView ->

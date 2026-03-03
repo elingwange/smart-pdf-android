@@ -9,13 +9,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.data.model.SortField
 import com.quantumstudio.smartpdf.data.model.SortOrder
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
 import com.quantumstudio.smartpdf.data.repository.ThemeRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,12 +24,14 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 enum class ThemeMode {
     SYSTEM, LIGHT, DARK
 }
 
-class MainViewModel(
+@HiltViewModel
+class MainViewModel @Inject constructor(
     private val pdfRepository: PdfRepository,
     private val themeRepository: ThemeRepository
 ) : ViewModel() {
@@ -211,20 +213,6 @@ class MainViewModel(
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
             }
-        }
-    }
-
-    // 添加工厂类
-    class Factory(
-        private val pdfRepository: PdfRepository,
-        private val themeRepository: ThemeRepository
-    ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                @Suppress("UNCHECKED_CAST")
-                return MainViewModel(pdfRepository, themeRepository) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
         }
     }
 
