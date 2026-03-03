@@ -16,9 +16,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
-rootProject.name = "SmartPDF"
+rootProject.name = "Smart PDF"
 include(":app")
+include(":android-pdf-viewer")
  
