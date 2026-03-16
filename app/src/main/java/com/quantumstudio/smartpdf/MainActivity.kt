@@ -1,11 +1,9 @@
 package com.quantumstudio.smartpdf
 
-import android.animation.ObjectAnimator
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -16,9 +14,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -30,6 +26,7 @@ import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.viewer.PdfReaderScreen
 import com.quantumstudio.smartpdf.ui.theme.SmartPDFTheme
 import com.quantumstudio.smartpdf.util.PermissionManager
+import com.quantumstudio.smartpdf.util.installCustomExitAnimation
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -42,29 +39,14 @@ class MainActivity : ComponentActivity() {
 
     @RequiresApi(Build.VERSION_CODES.N_MR1)
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splashScreen = installSplashScreen()
-        super.onCreate(savedInstanceState)
 
-        // 2. 启动页退出动画
-        splashScreen.setOnExitAnimationListener { splashScreenView ->
-            val slideUp = ObjectAnimator.ofFloat(
-                splashScreenView.view,
-                View.TRANSLATION_Y,
-                0f,
-                -splashScreenView.view.height.toFloat()
-            )
-            slideUp.interpolator = FastOutSlowInInterpolator()
-            slideUp.duration = 400L
-            slideUp.doOnEnd {
-                splashScreenView.remove()
-                // ✨ 启动页消失后，检查是否有快捷方式进来的 Intent
-                handleIntent(intent)
-            }
-            slideUp.start()
+        installSplashScreen().installCustomExitAnimation() {
+            handleIntent(intent)
         }
 
-        initObservers()
+        super.onCreate(savedInstanceState)
 
+        initObservers()
 
         setContent {
             val themeMode by viewModel.themeMode.collectAsState()
