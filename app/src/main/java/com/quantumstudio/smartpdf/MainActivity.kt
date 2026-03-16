@@ -29,11 +29,14 @@ import com.quantumstudio.smartpdf.ui.features.main.MainScreen
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.viewer.PdfReaderScreen
 import com.quantumstudio.smartpdf.ui.theme.SmartPDFTheme
+import com.quantumstudio.smartpdf.util.PermissionManager
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
+    @Inject
+    lateinit var permissionManager: PermissionManager
     private val viewModel: MainViewModel by viewModels()
     private var navController: NavHostController? = null // ✨ 定义导航控制器
 
@@ -59,6 +62,9 @@ class MainActivity : ComponentActivity() {
             }
             slideUp.start()
         }
+
+        initObservers()
+
 
         setContent {
             val themeMode by viewModel.themeMode.collectAsState()
@@ -106,6 +112,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    fun initObservers() {
+        lifecycle.addObserver(viewModel.createPermissionObserver {
+            permissionManager.isStoragePermissionGranted()
+        })
+    }
+
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent) // 关键：更新 Intent，否则 handleIntent 拿到的还是旧数据
@@ -123,8 +136,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        viewModel.checkPermission(this)
-    }
+    /**
+     * unacceptable, why?
+     */
+//    override fun onResume() {
+//        super.onResume()
+//        viewModel.checkPermission(this)
+//    }
 }

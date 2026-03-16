@@ -15,13 +15,17 @@ import com.quantumstudio.smartpdf.data.model.SortField
 import com.quantumstudio.smartpdf.data.model.SortOrder
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
 import com.quantumstudio.smartpdf.data.repository.ThemeRepository
+import com.quantumstudio.smartpdf.ui.common.RefreshPermissionObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -35,6 +39,18 @@ class MainViewModel @Inject constructor(
     private val pdfRepository: PdfRepository,
     private val themeRepository: ThemeRepository
 ) : ViewModel() {
+
+    private val _refreshSignal = MutableSharedFlow<Unit>(replay = 1)
+    fun createPermissionObserver(checkPermission: () -> Boolean) =
+        RefreshPermissionObserver(
+            checkPermission = checkPermission,
+            onPermissionGranted = { _refreshSignal.tryEmit(Unit) }
+        )
+
+    // TODO: 后续替换列表和搜索数据流
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val pdfFilesFlow = _refreshSignal.flatMapLatest { pdfRepository.getAllPdfsFlow() }
+
 
     //=============== searching ===============
     // 1. 原始数据流（来自数据库）
@@ -69,14 +85,6 @@ class MainViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = ThemeMode.SYSTEM
     )
-
-    // ✨ 进入阅读器时强制检查一次
-    fun ensurePdfExists(path: String) {
-        viewModelScope.launch {
-            pdfRepository.getOrInsertPdf(path)
-            // 执行后，Flow 会自动感知数据库变化并刷新 UI
-        }
-    }
 
     // 存储当前正在阅读的文件状态（单点精准观察）
     var currentReadingPdf by mutableStateOf<PdfFile?>(null)
@@ -130,8 +138,6 @@ class MainViewModel @Inject constructor(
         if (!hasFileAccess) return
         viewModelScope.launch {
             val scanned = pdfRepository.getAllPdfs(context)
-//            _pdfFiles.clear()
-//            _pdfFiles.addAll(scanned)
             // 直接发出新的 List 即可触发 UI 更新
             _pdfFiles.value = scanned
         }
