@@ -8,23 +8,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import com.quantumstudio.smartpdf.ui.features.main.MainScreen
+import com.quantumstudio.smartpdf.ui.SmartPDFRoot
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
-import com.quantumstudio.smartpdf.ui.features.viewer.PdfReaderScreen
-import com.quantumstudio.smartpdf.ui.theme.SmartPDFTheme
+import com.quantumstudio.smartpdf.ui.navigation.AppNavHost
 import com.quantumstudio.smartpdf.util.PermissionManager
 import com.quantumstudio.smartpdf.util.installCustomExitAnimation
 import dagger.hilt.android.AndroidEntryPoint
@@ -35,7 +23,7 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var permissionManager: PermissionManager
     private val viewModel: MainViewModel by viewModels()
-    private var navController: NavHostController? = null // ✨ 定义导航控制器
+    private var navController: NavHostController? = null
 
     @RequiresApi(Build.VERSION_CODES.N_MR1)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,47 +37,11 @@ class MainActivity : ComponentActivity() {
         initObservers()
 
         setContent {
-            val themeMode by viewModel.themeMode.collectAsState()
-            val currentNavController = rememberNavController()
-            navController = currentNavController // ✨ 赋值给成员变量供 handleIntent 使用
-
-            SmartPDFTheme(themeMode = themeMode) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    // --- ✨ 导航核心配置 ---
-                    NavHost(
-                        navController = currentNavController,
-                        startDestination = "main" // 默认进入首页
-                    ) {
-                        // 首页
-                        composable("main") {
-                            MainScreen(
-                                viewModel = viewModel,
-                                onNavigateToReader = { uri ->
-                                    val encodedUri = Uri.encode(uri.toString())
-                                    currentNavController.navigate("reader/$encodedUri")
-                                }
-                            )
-                        }
-
-                        // 阅读器页面
-                        composable(
-                            route = "reader/{pdfUri}",
-                            arguments = listOf(navArgument("pdfUri") { type = NavType.StringType })
-                        ) { backStackEntry ->
-                            val uriString = backStackEntry.arguments?.getString("pdfUri")
-                            val uri = Uri.parse(Uri.decode(uriString))
-
-                            PdfReaderScreen(
-                                uri = uri,
-                                viewModel = viewModel,
-                                onBack = { currentNavController.popBackStack() }
-                            )
-                        }
-                    }
-                }
+            SmartPDFRoot(
+                viewModel = viewModel,
+                onCreated = { navController = it } // 直接赋值给成员变量
+            ) { controller ->
+                AppNavHost(controller, viewModel)
             }
         }
     }
@@ -100,29 +52,25 @@ class MainActivity : ComponentActivity() {
         })
     }
 
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        setIntent(intent) // 关键：更新 Intent，否则 handleIntent 拿到的还是旧数据
+        // 关键：更新 Intent，否则 handleIntent 拿到的还是旧数据
+        setIntent(intent)
         handleIntent(intent)
     }
 
     private fun handleIntent(intent: Intent?) {
-        intent?.data?.let { uri ->
-            val encodedUri = Uri.encode(uri.toString())
-            // ✨ 使用生命周期安全的导航调用
-            navController?.navigate("reader/$encodedUri") {
-                // 如果已经在阅读器里了，弹出当前页面重新进入，避免堆栈重复
-                launchSingleTop = true
-            }
+        val uri = intent?.data ?: return // 快速失败，减少嵌套
+        val encodedUri = Uri.encode(uri.toString())
+        navController?.navigate("reader/$encodedUri") {
+            launchSingleTop = true
+            // 如果已经在首页了，不希望点击快捷方式后还能点“返回”回到之前的状态
+            // 这种方式能让导航栈更干净
+            popUpTo("main") { saveState = true }
         }
+        // 处理完后将 data 置空
+        // 这样在 Activity 因系统原因（如主题切换）重启时，不会再次触发 handleIntent
+        intent.data = null
     }
 
-    /**
-     * unacceptable, why?
-     */
-//    override fun onResume() {
-//        super.onResume()
-//        viewModel.checkPermission(this)
-//    }
 }
