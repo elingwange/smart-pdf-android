@@ -27,6 +27,10 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import com.quantumstudio.smartpdf.data.model.PdfFile
+import com.quantumstudio.smartpdf.ui.common.UiEvent
 import com.quantumstudio.smartpdf.ui.components.MenuAction
 import com.quantumstudio.smartpdf.ui.components.PdfDeleteDialog
 import com.quantumstudio.smartpdf.ui.components.PdfListItem
@@ -58,8 +63,9 @@ import java.io.File
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
-    onNavigateToReader: (Uri) -> Unit // ✨ 关键：接收外部导航回调
+    onNavigateToReader: (Uri) -> Unit
 ) {
+    val snackBarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val pagerState = rememberPagerState(pageCount = { 4 })
     val scope = rememberCoroutineScope()
@@ -77,6 +83,27 @@ fun MainScreen(
         if (viewModel.hasFileAccess) viewModel.scanPdfs(context)
     }
 
+    // ✨ 新增：监听 ViewModel 发出的 UI 事件
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is UiEvent.ShowSnackBar -> {
+                    scope.launch {
+                        val result = snackBarHostState.showSnackbar(
+                            message = event.message,
+                            actionLabel = event.actionLabel,
+                            duration = SnackbarDuration.Short
+                        )
+                        // 判断用户是否点击了“撤销”
+                        if (result == SnackbarResult.ActionPerformed) {
+                            event.onAction?.invoke()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // 渲染排序对话框
     if (showSortDialog) {
         SortByDialog(
@@ -92,6 +119,7 @@ fun MainScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
+            snackbarHost = { SnackbarHost(hostState = snackBarHostState) },
             topBar = {
                 if (viewModel.hasFileAccess) MainTopBar(
                     currentPage = pagerState.currentPage,
@@ -206,7 +234,7 @@ fun PdfListContent(
                 fileName = pdf.name,
                 onDismiss = { pdfToDelete = null },
                 onConfirm = {
-                    viewModel.deleteFile(pdf, context)
+                    viewModel.deleteFile(pdf)
                     pdfToDelete = null
                 }
             )

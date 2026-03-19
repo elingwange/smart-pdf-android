@@ -13,11 +13,12 @@ import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.data.model.SortField
 import com.quantumstudio.smartpdf.data.model.SortOrder
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
-import com.quantumstudio.smartpdf.data.repository.ThemeRepository
 import com.quantumstudio.smartpdf.ui.common.RefreshPermissionObserver
+import com.quantumstudio.smartpdf.ui.common.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,20 +27,15 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class ThemeMode {
-    SYSTEM, LIGHT, DARK
-}
-
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val pdfRepository: PdfRepository,
-    private val themeRepository: ThemeRepository
+    private val pdfRepository: PdfRepository
 ) : ViewModel() {
-
     var hasFileAccess by mutableStateOf(false)
         private set
 
@@ -104,21 +100,6 @@ class MainViewModel @Inject constructor(
     }
     //=============== searching ===============
 
-
-    // 使用 stateIn 将 DataStore 的 Flow 转换为 UI 可用的 StateFlow
-    // 初始值设为 SYSTEM
-//    val themeMode = themeRepository.themeModeFlow.stateIn(
-//        scope = viewModelScope,
-//        started = SharingStarted.WhileSubscribed(5000),
-//        initialValue = ThemeMode.SYSTEM
-//    )
-//
-//    fun setThemeMode(mode: ThemeMode) {
-//        viewModelScope.launch {
-//            themeRepository.saveThemeMode(mode)
-//        }
-//    }
-
     fun toggleFavorite(pdf: PdfFile) {
         viewModelScope.launch {
             // 这一行执行完，Room 数据库会自动通知 allPdfsFlow 发射新数据
@@ -133,32 +114,36 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    // TODO: 修改提示方式，不需要context
-    fun deleteFile(pdf: PdfFile, context: Context) {
+    // 1. 私有通道：负责发送
+    private val _uiEvent = Channel<UiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow() // 暴露为 Flow 供 UI 监听
+
+    // 修改删除方法：去掉 context 参数
+    fun deleteFile(pdf: PdfFile) {
         viewModelScope.launch {
+            _uiEvent.send(
+                UiEvent.ShowSnackBar(
+                    message = "已删除 ${pdf.name}",
+                    //                   actionLabel = "撤销",
+                    onAction = {
+                        // 用户点了撤销，我们什么都不做（或者从临时回收站恢复）
+                        // 在你的简单逻辑里，如果不调 Repository 的物理删除，它就还在
+                    }
+                )
+            )
             val success = pdfRepository.deletePdfFile(pdf)
-            if (success) {
-                android.widget.Toast.makeText(
-                    context,
-                    "File deleted",
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
-            } else {
-                android.widget.Toast.makeText(
-                    context,
-                    "Delete failed",
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
+        }
+    }
+
+    // 重命名也可以同步修改（可选）
+    fun renameFile(pdf: PdfFile, newName: String) {
+        viewModelScope.launch {
+            val updated = pdfRepository.renamePdfFile(pdf, newName)
+            if (updated != null) {
+                //               _uiEvent.send(UiEvent.ShowToast("Renamed successfully"))
             }
         }
     }
-
-    fun renameFile(pdf: PdfFile, newName: String) {
-        viewModelScope.launch {
-            val updatedPdf = pdfRepository.renamePdfFile(pdf, newName)
-        }
-    }
-
 
     //=============== sort ===============
     // 排序状态
