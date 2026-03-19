@@ -31,5 +31,4 @@ object DatabaseModule {
         return PdfRepository(dao)
     }
 
-    // ThemeRepository 也可以在这里以同样方式提供
 }
