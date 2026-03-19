@@ -40,7 +40,6 @@ class MainViewModel @Inject constructor(
     private val themeRepository: ThemeRepository
 ) : ViewModel() {
 
-    // 是否拥有权限的状态
     var hasFileAccess by mutableStateOf(false)
         private set
 
@@ -54,11 +53,9 @@ class MainViewModel @Inject constructor(
             try {
                 isScanning = true
                 Log.d("SmartPDF", "开始全盘扫描...")
-
                 // 2. 调用 Repository 执行真正的 IO 操作（写数据库）
                 // 只要 getAllPdfs 内部执行了 roomDao.insert()，UI 就会自动刷新
                 pdfRepository.getAllPdfs(context)
-
                 Log.d("SmartPDF", "扫描完成，数据库已更新")
             } catch (e: Exception) {
                 Log.e("SmartPDF", "扫描出错", e)
@@ -73,9 +70,10 @@ class MainViewModel @Inject constructor(
     val allPdfsFlow = snapshotFlow { hasFileAccess }
         .distinctUntilChanged() // ✨ 只在权限真正发生切换时才重连数据库
         .flatMapLatest { granted ->
-            if (granted) pdfRepository.getAllPdfsFlow() else flowOf(emptyList())
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
+            if (granted) pdfRepository.getAllPdfsFlow()
+            else flowOf(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun createPermissionObserver(checkPermission: () -> Boolean): DefaultLifecycleObserver {
         return RefreshPermissionObserver(
@@ -115,34 +113,12 @@ class MainViewModel @Inject constructor(
         initialValue = ThemeMode.SYSTEM
     )
 
-    // 存储当前正在阅读的文件状态（单点精准观察）
-    var currentReadingPdf by mutableStateOf<PdfFile?>(null)
-        private set
-
-    fun loadPdfForReader(path: String) {
-        viewModelScope.launch {
-            // 1. 强制去数据库里查（或补录）
-            val pdf = pdfRepository.getOrInsertPdf(path)
-            // 2. 更新这个单点状态
-            currentReadingPdf = pdf
-        }
-    }
-
-    fun updateProgress(path: String, page: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            // 这里的顺序很重要：先确保有记录，再更新进度
-            pdfRepository.getOrInsertPdf(path)
-            pdfRepository.updateProgress(path, page)
-        }
-    }
-
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             themeRepository.saveThemeMode(mode)
         }
     }
 
-    // ✨ 核心优化 2：操作命令化。只负责改库，不负责改内存列表。
     fun toggleFavorite(pdf: PdfFile) {
         viewModelScope.launch {
             // 这一行执行完，Room 数据库会自动通知 allPdfsFlow 发射新数据

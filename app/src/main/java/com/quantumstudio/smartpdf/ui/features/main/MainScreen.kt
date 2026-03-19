@@ -3,6 +3,12 @@ package com.quantumstudio.smartpdf.ui.features.main
 import PdfInfoDialog
 import SearchScreen
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -132,8 +138,10 @@ fun MainScreen(
             }
         }
 
-        // 搜索图层
-        if (isSearching) {
+        AnimatedVisibility(
+            visible = isSearching, enter = expandVertically(animationSpec = tween(300)) + fadeIn(),
+            exit = shrinkVertically(animationSpec = tween(300)) + fadeOut()
+        ) {
             SearchScreen(
                 viewModel = viewModel,
                 onBack = {

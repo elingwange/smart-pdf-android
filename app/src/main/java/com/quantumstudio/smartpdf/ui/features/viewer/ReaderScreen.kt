@@ -54,7 +54,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -83,7 +82,12 @@ import kotlin.math.roundToInt
 
 @RequiresApi(Build.VERSION_CODES.N_MR1)
 @Composable
-fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
+fun PdfReaderScreen(
+    uri: Uri,
+    onBack: () -> Unit,
+    mainViewModel: MainViewModel,
+    viewModel: ReaderViewModel
+) {
     val context = LocalContext.current
     val activity = context as? Activity
 
@@ -94,14 +98,10 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
     }
 
     // 2. 观察数据（pdfFiles 仅用于大列表同步，currentReadingPdf 用于当前阅读）
-    val pdfFiles by viewModel.allPdfsFlow.collectAsState()
     val currentPdf = viewModel.currentReadingPdf
 
-    // 3. ✨ 核心加载逻辑：合并 LaunchedEffect
     LaunchedEffect(pdfPath) {
         viewModel.loadPdfForReader(pdfPath)
-        // 加载后的 Log 更有参考意义
-        android.util.Log.d("---PDF_TRACE", "单点查询已触发，路径: $pdfPath")
     }
 
     // 4. ✨ 屏障逻辑：没拿到数据库对象前，不渲染后续 UI
@@ -209,7 +209,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                         }
                         .onLoad {
                             isFirstLoad = false
-                            viewModel.markAsRead(currentPdf)
+                            mainViewModel.markAsRead(currentPdf)
                         }
                         .load()
                     lastLoadedUri = uri
@@ -398,7 +398,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                             tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             onClick = {
                                 //viewModel.toggleFavorite(pdfPath)
-                                viewModel.toggleFavorite(currentPdf)
+                                mainViewModel.toggleFavorite(currentPdf)
                             }
                         )
                     }

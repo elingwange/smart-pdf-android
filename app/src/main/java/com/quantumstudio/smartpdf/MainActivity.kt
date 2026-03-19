@@ -12,6 +12,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavHostController
 import com.quantumstudio.smartpdf.ui.SmartPDFRoot
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
+import com.quantumstudio.smartpdf.ui.features.viewer.ReaderViewModel
 import com.quantumstudio.smartpdf.ui.navigation.AppNavHost
 import com.quantumstudio.smartpdf.util.PermissionManager
 import com.quantumstudio.smartpdf.util.installCustomExitAnimation
@@ -22,7 +23,8 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
     @Inject
     lateinit var permissionManager: PermissionManager
-    private val viewModel: MainViewModel by viewModels()
+    private val mainViewModel: MainViewModel by viewModels()
+    private val readerViewModel: ReaderViewModel by viewModels()
     private var navController: NavHostController? = null
 
     @RequiresApi(Build.VERSION_CODES.N_MR1)
@@ -38,20 +40,18 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SmartPDFRoot(
-                viewModel = viewModel,
-                onCreated = { navController = it } // 直接赋值给成员变量
+                viewModel = mainViewModel,
+                onCreated = { navController = it }
             ) { controller ->
-                AppNavHost(controller, viewModel)
+                AppNavHost(controller, mainViewModel, readerViewModel)
             }
         }
     }
 
     fun initObservers() {
-        lifecycle.addObserver(viewModel.createPermissionObserver {
+        lifecycle.addObserver(mainViewModel.createPermissionObserver {
             permissionManager.isStoragePermissionGranted()
         })
-
-//        lifecycle.addObserver(viewModel.createPermissionObserver(this))
     }
 
     override fun onNewIntent(intent: Intent) {

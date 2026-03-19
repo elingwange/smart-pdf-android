@@ -12,11 +12,16 @@ import androidx.navigation.navArgument
 import com.quantumstudio.smartpdf.ui.features.main.MainScreen
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.viewer.PdfReaderScreen
+import com.quantumstudio.smartpdf.ui.features.viewer.ReaderViewModel
 
 
 @RequiresApi(Build.VERSION_CODES.N_MR1)
 @Composable
-fun AppNavHost(navController: NavHostController, mainViewModel: MainViewModel) {
+fun AppNavHost(
+    navController: NavHostController,
+    mainViewModel: MainViewModel,
+    readerViewModel: ReaderViewModel
+) {
     NavHost(
         navController = navController,
         startDestination = "main" // 默认进入首页
@@ -42,7 +47,8 @@ fun AppNavHost(navController: NavHostController, mainViewModel: MainViewModel) {
 
             PdfReaderScreen(
                 uri = uri,
-                viewModel = mainViewModel,
+                mainViewModel = mainViewModel,
+                viewModel = readerViewModel,
                 onBack = { navController.popBackStack() }
             )
         }
