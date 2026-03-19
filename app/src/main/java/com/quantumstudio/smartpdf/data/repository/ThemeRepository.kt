@@ -5,14 +5,16 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.quantumstudio.smartpdf.ui.features.main.ThemeMode
+import com.quantumstudio.smartpdf.ui.features.settings.ThemeMode
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
 // 定义 DataStore 扩展属性
 private val Context.dataStore by preferencesDataStore(name = "settings")
 
-class ThemeRepository(private val context: Context) {
+class ThemeRepository @Inject constructor(@ApplicationContext private val context: Context) {
 
     private val THEME_KEY = stringPreferencesKey("theme_mode")
 

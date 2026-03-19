@@ -3,6 +3,12 @@ package com.quantumstudio.smartpdf.ui.features.main
 import PdfInfoDialog
 import SearchScreen
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -21,6 +27,10 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import com.quantumstudio.smartpdf.data.model.PdfFile
+import com.quantumstudio.smartpdf.ui.common.UiEvent
 import com.quantumstudio.smartpdf.ui.components.MenuAction
 import com.quantumstudio.smartpdf.ui.components.PdfDeleteDialog
 import com.quantumstudio.smartpdf.ui.components.PdfListItem
@@ -43,6 +54,7 @@ import com.quantumstudio.smartpdf.ui.components.PdfRenameDialog
 import com.quantumstudio.smartpdf.ui.components.PermissionGuideScreen
 import com.quantumstudio.smartpdf.ui.components.SortByDialog
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsScreen
+import com.quantumstudio.smartpdf.ui.theme.PdfRed
 import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
 import kotlinx.coroutines.launch
@@ -51,8 +63,9 @@ import java.io.File
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
-    onNavigateToReader: (Uri) -> Unit // ✨ 关键：接收外部导航回调
+    onNavigateToReader: (Uri) -> Unit
 ) {
+    val snackBarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val pagerState = rememberPagerState(pageCount = { 4 })
     val scope = rememberCoroutineScope()
@@ -66,9 +79,29 @@ fun MainScreen(
     val currentOrder by viewModel.sortOrder.collectAsState()
 
     // 权限与扫描逻辑
-    LaunchedEffect(Unit) { viewModel.checkPermission(context) }
     LaunchedEffect(viewModel.hasFileAccess) {
         if (viewModel.hasFileAccess) viewModel.scanPdfs(context)
+    }
+
+    // ✨ 新增：监听 ViewModel 发出的 UI 事件
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is UiEvent.ShowSnackBar -> {
+                    scope.launch {
+                        val result = snackBarHostState.showSnackbar(
+                            message = event.message,
+                            actionLabel = event.actionLabel,
+                            duration = SnackbarDuration.Short
+                        )
+                        // 判断用户是否点击了“撤销”
+                        if (result == SnackbarResult.ActionPerformed) {
+                            event.onAction?.invoke()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // 渲染排序对话框
@@ -86,6 +119,7 @@ fun MainScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
+            snackbarHost = { SnackbarHost(hostState = snackBarHostState) },
             topBar = {
                 if (viewModel.hasFileAccess) MainTopBar(
                     currentPage = pagerState.currentPage,
@@ -126,15 +160,17 @@ fun MainScreen(
                             0 -> AllFilesTab(viewModel, onFileClick)
                             1 -> FavoriteFilesTab(viewModel, onFileClick)
                             2 -> RecentFilesTab(viewModel, onFileClick)
-                            3 -> SettingsScreen(viewModel = viewModel)
+                            3 -> SettingsScreen()
                         }
                     }
                 }
             }
         }
 
-        // 搜索图层
-        if (isSearching) {
+        AnimatedVisibility(
+            visible = isSearching, enter = expandVertically(animationSpec = tween(300)) + fadeIn(),
+            exit = shrinkVertically(animationSpec = tween(300)) + fadeOut()
+        ) {
             SearchScreen(
                 viewModel = viewModel,
                 onBack = {
@@ -144,7 +180,6 @@ fun MainScreen(
                 onFileClick = { pdf ->
                     isSearching = false
                     viewModel.onQueryChange("")
-                    // ✨ 搜索结果也通过导航跳转
                     onNavigateToReader(Uri.fromFile(File(pdf.path)))
                 }
             )
@@ -177,7 +212,7 @@ fun PdfListContent(
                         onMenuAction = { action ->
                             when (action) {
                                 is MenuAction.Info -> selectedPdfForInfo = pdf
-                                is MenuAction.Favorite -> viewModel.toggleFavorite(pdf.path)
+                                is MenuAction.Favorite -> viewModel.toggleFavorite(pdf)
                                 is MenuAction.Rename -> pdfToRename = pdf
                                 is MenuAction.Delete -> pdfToDelete = pdf
                                 is MenuAction.Share -> sharePdf(context, pdf)
@@ -199,7 +234,7 @@ fun PdfListContent(
                 fileName = pdf.name,
                 onDismiss = { pdfToDelete = null },
                 onConfirm = {
-                    viewModel.deleteFile(pdf, context)
+                    viewModel.deleteFile(pdf)
                     pdfToDelete = null
                 }
             )
@@ -210,7 +245,7 @@ fun PdfListContent(
                 currentName = pdf.name,
                 onDismiss = { pdfToRename = null },
                 onConfirm = { newName ->
-                    viewModel.renameFile(pdf, newName, context)
+                    viewModel.renameFile(pdf, newName)
                     pdfToRename = null
                 }
             )
@@ -235,7 +270,7 @@ fun FavoriteFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
 
 @Composable
 fun RecentFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
-    val files by viewModel.pdfFiles.collectAsState()
+    val files by viewModel.allPdfsFlow.collectAsState()
     val recentFiles = remember(files) {
         files.filter { it.lastReadTime > 0 }.sortedByDescending { it.lastReadTime }
     }
@@ -246,9 +281,9 @@ fun RecentFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
 fun AppBottomNavigation(currentPage: Int, onTabSelected: (Int) -> Unit) {
     val items = listOf(
         "Home" to Icons.Default.Home,
-        "Fav" to Icons.Default.Favorite,
+        "Favorite" to Icons.Default.Favorite,
         "Recent" to Icons.Default.History,
-        "Set" to Icons.Default.Settings
+        "Settings" to Icons.Default.Settings
     )
 
     NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
@@ -257,10 +292,12 @@ fun AppBottomNavigation(currentPage: Int, onTabSelected: (Int) -> Unit) {
                 selected = currentPage == index,
                 onClick = { onTabSelected(index) },
                 icon = { Icon(icon, null) },
-                label = { Text(label, fontSize = 10.sp) },
+                label = { Text(label, fontSize = 13.sp) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
+//                    selectedIconColor = MaterialTheme.colorScheme.primary,
+//                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    selectedIconColor = PdfRed,
+                    selectedTextColor = PdfRed,
                     indicatorColor = Color.Transparent
                 )
             )

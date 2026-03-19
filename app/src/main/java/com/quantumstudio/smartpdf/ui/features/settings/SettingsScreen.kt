@@ -48,8 +48,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
-import com.quantumstudio.smartpdf.ui.features.main.ThemeMode
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.openAppInfoSettings
 import com.quantumstudio.smartpdf.util.CommonUtils.openPlayStore
@@ -58,7 +57,7 @@ import com.quantumstudio.smartpdf.util.CommonUtils.openSystemFileManager
 import com.quantumstudio.smartpdf.util.CommonUtils.sendFeedbackEmail
 
 @Composable
-fun SettingsScreen(viewModel: MainViewModel) {
+fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val currentTheme by viewModel.themeMode.collectAsState()
     // 使用 remember 避免每次重组都去查询系统，提高性能
