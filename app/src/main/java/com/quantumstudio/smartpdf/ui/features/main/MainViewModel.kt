@@ -107,17 +107,17 @@ class MainViewModel @Inject constructor(
 
     // 使用 stateIn 将 DataStore 的 Flow 转换为 UI 可用的 StateFlow
     // 初始值设为 SYSTEM
-    val themeMode = themeRepository.themeModeFlow.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = ThemeMode.SYSTEM
-    )
-
-    fun setThemeMode(mode: ThemeMode) {
-        viewModelScope.launch {
-            themeRepository.saveThemeMode(mode)
-        }
-    }
+//    val themeMode = themeRepository.themeModeFlow.stateIn(
+//        scope = viewModelScope,
+//        started = SharingStarted.WhileSubscribed(5000),
+//        initialValue = ThemeMode.SYSTEM
+//    )
+//
+//    fun setThemeMode(mode: ThemeMode) {
+//        viewModelScope.launch {
+//            themeRepository.saveThemeMode(mode)
+//        }
+//    }
 
     fun toggleFavorite(pdf: PdfFile) {
         viewModelScope.launch {

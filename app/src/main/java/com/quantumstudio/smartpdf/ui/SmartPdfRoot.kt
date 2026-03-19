@@ -9,12 +9,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
+import com.quantumstudio.smartpdf.ui.features.settings.SettingsViewModel
 import com.quantumstudio.smartpdf.ui.theme.SmartPDFTheme
 
 @Composable
 fun SmartPDFRoot(
-    viewModel: MainViewModel,
+    settingsViewModel: SettingsViewModel,
     navController: NavHostController = rememberNavController(),
     // 改用 Lambda 传出 controller，让 Activity 接收
     onCreated: (NavHostController) -> Unit,
@@ -25,7 +25,7 @@ fun SmartPDFRoot(
     LaunchedEffect(navController) {
         onCreated(navController)
     }
-    val themeMode by viewModel.themeMode.collectAsState()
+    val themeMode by settingsViewModel.themeMode.collectAsState()
     SmartPDFTheme(themeMode) {
         Surface(modifier = Modifier.fillMaxSize()) {
             // 把内部创建的 controller 交还给具体的导航配置

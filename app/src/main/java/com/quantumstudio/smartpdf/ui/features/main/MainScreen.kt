@@ -49,6 +49,7 @@ import com.quantumstudio.smartpdf.ui.components.PdfRenameDialog
 import com.quantumstudio.smartpdf.ui.components.PermissionGuideScreen
 import com.quantumstudio.smartpdf.ui.components.SortByDialog
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsScreen
+import com.quantumstudio.smartpdf.ui.theme.PdfRed
 import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
 import kotlinx.coroutines.launch
@@ -131,7 +132,7 @@ fun MainScreen(
                             0 -> AllFilesTab(viewModel, onFileClick)
                             1 -> FavoriteFilesTab(viewModel, onFileClick)
                             2 -> RecentFilesTab(viewModel, onFileClick)
-                            3 -> SettingsScreen(viewModel = viewModel)
+                            3 -> SettingsScreen()
                         }
                     }
                 }
@@ -151,7 +152,6 @@ fun MainScreen(
                 onFileClick = { pdf ->
                     isSearching = false
                     viewModel.onQueryChange("")
-                    // ✨ 搜索结果也通过导航跳转
                     onNavigateToReader(Uri.fromFile(File(pdf.path)))
                 }
             )
@@ -253,9 +253,9 @@ fun RecentFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
 fun AppBottomNavigation(currentPage: Int, onTabSelected: (Int) -> Unit) {
     val items = listOf(
         "Home" to Icons.Default.Home,
-        "Fav" to Icons.Default.Favorite,
+        "Favorite" to Icons.Default.Favorite,
         "Recent" to Icons.Default.History,
-        "Set" to Icons.Default.Settings
+        "Settings" to Icons.Default.Settings
     )
 
     NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
@@ -264,10 +264,12 @@ fun AppBottomNavigation(currentPage: Int, onTabSelected: (Int) -> Unit) {
                 selected = currentPage == index,
                 onClick = { onTabSelected(index) },
                 icon = { Icon(icon, null) },
-                label = { Text(label, fontSize = 10.sp) },
+                label = { Text(label, fontSize = 13.sp) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
+//                    selectedIconColor = MaterialTheme.colorScheme.primary,
+//                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    selectedIconColor = PdfRed,
+                    selectedTextColor = PdfRed,
                     indicatorColor = Color.Transparent
                 )
             )

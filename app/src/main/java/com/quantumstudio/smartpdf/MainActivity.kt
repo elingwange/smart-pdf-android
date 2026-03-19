@@ -12,6 +12,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavHostController
 import com.quantumstudio.smartpdf.ui.SmartPDFRoot
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
+import com.quantumstudio.smartpdf.ui.features.settings.SettingsViewModel
 import com.quantumstudio.smartpdf.ui.features.viewer.ReaderViewModel
 import com.quantumstudio.smartpdf.ui.navigation.AppNavHost
 import com.quantumstudio.smartpdf.util.PermissionManager
@@ -25,6 +26,8 @@ class MainActivity : ComponentActivity() {
     lateinit var permissionManager: PermissionManager
     private val mainViewModel: MainViewModel by viewModels()
     private val readerViewModel: ReaderViewModel by viewModels()
+
+    private val settingsViewModel: SettingsViewModel by viewModels()
     private var navController: NavHostController? = null
 
     @RequiresApi(Build.VERSION_CODES.N_MR1)
@@ -40,7 +43,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SmartPDFRoot(
-                viewModel = mainViewModel,
+                settingsViewModel = settingsViewModel,
                 onCreated = { navController = it }
             ) { controller ->
                 AppNavHost(controller, mainViewModel, readerViewModel)
