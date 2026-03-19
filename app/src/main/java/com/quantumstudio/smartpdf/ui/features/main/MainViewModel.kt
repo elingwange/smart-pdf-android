@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -42,20 +43,39 @@ class MainViewModel @Inject constructor(
     // 是否拥有权限的状态
     var hasFileAccess by mutableStateOf(false)
         private set
-    private val _pdfFiles = MutableStateFlow<List<PdfFile>>(emptyList())
-    val pdfFiles = _pdfFiles.asStateFlow()
+
+    private var isScanning = false // 简单的状态锁
 
     fun scanPdfs(context: Context) {
-        if (!hasFileAccess) return
-        viewModelScope.launch {
-            Log.e("---xxxxxxxx", "scanning begin...")
-            val scanned = pdfRepository.getAllPdfs(context)
-            Log.e("---xxxxxxxx", "scanning end!")
+        // 1. 权限检查 + 状态检查
+        if (!hasFileAccess || isScanning) return
 
-            // 直接发出新的 List 即可触发 UI 更新
-            _pdfFiles.value = scanned
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                isScanning = true
+                Log.d("SmartPDF", "开始全盘扫描...")
+
+                // 2. 调用 Repository 执行真正的 IO 操作（写数据库）
+                // 只要 getAllPdfs 内部执行了 roomDao.insert()，UI 就会自动刷新
+                pdfRepository.getAllPdfs(context)
+
+                Log.d("SmartPDF", "扫描完成，数据库已更新")
+            } catch (e: Exception) {
+                Log.e("SmartPDF", "扫描出错", e)
+            } finally {
+                isScanning = false
+            }
         }
     }
+
+    // ✨ 核心优化 1：数据源唯一化。直接从数据库拿流，只要库里变，这里秒变。
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val allPdfsFlow = snapshotFlow { hasFileAccess }
+        .distinctUntilChanged() // ✨ 只在权限真正发生切换时才重连数据库
+        .flatMapLatest { granted ->
+            if (granted) pdfRepository.getAllPdfsFlow() else flowOf(emptyList())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
 
     fun createPermissionObserver(checkPermission: () -> Boolean): DefaultLifecycleObserver {
         return RefreshPermissionObserver(
@@ -66,24 +86,6 @@ class MainViewModel @Inject constructor(
         )
     }
 
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val pdfFilesFlow = snapshotFlow { hasFileAccess } // 1. 将 Compose 状态转为 Flow
-        .flatMapLatest { hasAccess ->
-            if (hasAccess) {
-                // 2. 只有当权限为 true 时，才接入数据库的长连接流
-                pdfRepository.getAllPdfsFlow()
-            } else {
-                // 3. 没权限时，直接发射空列表，断开数据库连接
-                flowOf(emptyList())
-            }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
     // 2. 搜索词状态
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
@@ -91,7 +93,7 @@ class MainViewModel @Inject constructor(
     // 3. 核心：通过 combine 实时计算搜索结果
     val searchResult = _searchQuery
         .debounce(300) // 防抖，防止输入太快卡顿
-        .combine(pdfFilesFlow) { query, allFiles ->
+        .combine(allPdfsFlow) { query, allFiles ->
             if (query.isBlank()) {
                 emptyList() // 没输入时不显示结果
             } else {
@@ -123,7 +125,6 @@ class MainViewModel @Inject constructor(
             val pdf = pdfRepository.getOrInsertPdf(path)
             // 2. 更新这个单点状态
             currentReadingPdf = pdf
-            android.util.Log.d("PDF_TRACE", "单点加载完成：${pdf?.name}, 进度: ${pdf?.currentPage}")
         }
     }
 
@@ -141,54 +142,31 @@ class MainViewModel @Inject constructor(
         }
     }
 
-
-    fun toggleFavorite(path: String) {
+    // ✨ 核心优化 2：操作命令化。只负责改库，不负责改内存列表。
+    fun toggleFavorite(pdf: PdfFile) {
         viewModelScope.launch {
-            // 1. 获取当前列表中的状态
-            val currentFiles = _pdfFiles.value
-            val fileToUpdate = currentFiles.find { it.path == path } ?: return@launch
-            val newStatus = !fileToUpdate.isFavorite
-
-            // 2. 立即更新内存 UI
-            _pdfFiles.value = currentFiles.map {
-                if (it.path == path) it.copy(isFavorite = newStatus) else it
-            }
-
-            // 3. 异步持久化到数据库
-            pdfRepository.toggleFavorite(path, newStatus)
+            // 这一行执行完，Room 数据库会自动通知 allPdfsFlow 发射新数据
+            pdfRepository.toggleFavorite(pdf.path, !pdf.isFavorite)
         }
     }
 
-    fun markAsRead(path: String) {
+    fun markAsRead(pdf: PdfFile) {
         viewModelScope.launch {
             // 1. 持久化到数据库
-            pdfRepository.markAsRead(path)
-
-            // 2. 更新内存状态，确保 UI 刷新
-            _pdfFiles.value = _pdfFiles.value.map { pdf ->
-                if (pdf.path == path) pdf.copy(lastReadTime = System.currentTimeMillis()) else pdf
-            }
+            pdfRepository.markAsRead(pdf.path)
         }
     }
 
-    fun deleteFile(pdf: PdfFile, context: android.content.Context) {
+    // TODO: 修改提示方式，不需要context
+    fun deleteFile(pdf: PdfFile, context: Context) {
         viewModelScope.launch {
             val success = pdfRepository.deletePdfFile(pdf)
             if (success) {
-                // 1. 更新内存中的列表，让 UI 立即刷新
-                _pdfFiles.value = _pdfFiles.value.filter { it.path != pdf.path }
-
-                // 2. 提示用户
                 android.widget.Toast.makeText(
                     context,
                     "File deleted",
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
-
-                // 3. 重要：通知系统扫描媒体库，防止其他 App 还以为这文件存在
-                android.media.MediaScannerConnection.scanFile(
-                    context, arrayOf(pdf.path), null, null
-                )
             } else {
                 android.widget.Toast.makeText(
                     context,
@@ -199,25 +177,9 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun renameFile(pdf: PdfFile, newName: String, context: android.content.Context) {
+    fun renameFile(pdf: PdfFile, newName: String) {
         viewModelScope.launch {
             val updatedPdf = pdfRepository.renamePdfFile(pdf, newName)
-            if (updatedPdf != null) {
-                // 更新 UI 列表：替换掉旧对象
-                _pdfFiles.value = _pdfFiles.value.map {
-                    if (it.path == pdf.path) updatedPdf else it
-                }
-                // 通知系统媒体库更新
-                android.media.MediaScannerConnection.scanFile(
-                    context, arrayOf(pdf.path, updatedPdf.path), null, null
-                )
-            } else {
-                android.widget.Toast.makeText(
-                    context,
-                    "Rename failed",
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
-            }
         }
     }
 
@@ -231,7 +193,7 @@ class MainViewModel @Inject constructor(
     val sortOrder = _sortOrder.asStateFlow()
 
     // 结合原始文件列表和排序状态
-    val sortedPdfFiles = combine(pdfFiles, _sortField, _sortOrder) { files, field, order ->
+    val sortedPdfFiles = combine(allPdfsFlow, _sortField, _sortOrder) { files, field, order ->
         when (field) {
             SortField.DATE -> if (order == SortOrder.ASCENDING) files.sortedBy { it.lastModified } else files.sortedByDescending { it.lastModified }
             SortField.NAME -> if (order == SortOrder.ASCENDING) files.sortedBy { it.name.lowercase() } else files.sortedByDescending { it.name.lowercase() }

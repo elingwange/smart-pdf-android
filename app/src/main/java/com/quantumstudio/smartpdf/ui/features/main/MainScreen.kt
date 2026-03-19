@@ -176,7 +176,7 @@ fun PdfListContent(
                         onMenuAction = { action ->
                             when (action) {
                                 is MenuAction.Info -> selectedPdfForInfo = pdf
-                                is MenuAction.Favorite -> viewModel.toggleFavorite(pdf.path)
+                                is MenuAction.Favorite -> viewModel.toggleFavorite(pdf)
                                 is MenuAction.Rename -> pdfToRename = pdf
                                 is MenuAction.Delete -> pdfToDelete = pdf
                                 is MenuAction.Share -> sharePdf(context, pdf)
@@ -209,7 +209,7 @@ fun PdfListContent(
                 currentName = pdf.name,
                 onDismiss = { pdfToRename = null },
                 onConfirm = { newName ->
-                    viewModel.renameFile(pdf, newName, context)
+                    viewModel.renameFile(pdf, newName)
                     pdfToRename = null
                 }
             )
@@ -234,7 +234,7 @@ fun FavoriteFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
 
 @Composable
 fun RecentFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
-    val files by viewModel.pdfFiles.collectAsState()
+    val files by viewModel.allPdfsFlow.collectAsState()
     val recentFiles = remember(files) {
         files.filter { it.lastReadTime > 0 }.sortedByDescending { it.lastReadTime }
     }

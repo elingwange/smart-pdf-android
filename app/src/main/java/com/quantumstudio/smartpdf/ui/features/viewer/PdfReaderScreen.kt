@@ -94,7 +94,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
     }
 
     // 2. 观察数据（pdfFiles 仅用于大列表同步，currentReadingPdf 用于当前阅读）
-    val pdfFiles by viewModel.pdfFiles.collectAsState()
+    val pdfFiles by viewModel.allPdfsFlow.collectAsState()
     val currentPdf = viewModel.currentReadingPdf
 
     // 3. ✨ 核心加载逻辑：合并 LaunchedEffect
@@ -209,7 +209,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                         }
                         .onLoad {
                             isFirstLoad = false
-                            viewModel.markAsRead(pdfPath)
+                            viewModel.markAsRead(currentPdf)
                         }
                         .load()
                     lastLoadedUri = uri
@@ -381,7 +381,7 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                                 showJumpLayout = false
                             }
                         )
-    
+
                         // 跳转按钮
                         BottomActionIcon(
                             icon = Icons.Default.FindInPage,
@@ -396,7 +396,10 @@ fun PdfReaderScreen(uri: Uri, onBack: () -> Unit, viewModel: MainViewModel) {
                         BottomActionIcon(
                             icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            onClick = { viewModel.toggleFavorite(pdfPath) }
+                            onClick = {
+                                //viewModel.toggleFavorite(pdfPath)
+                                viewModel.toggleFavorite(currentPdf)
+                            }
                         )
                     }
                 }
