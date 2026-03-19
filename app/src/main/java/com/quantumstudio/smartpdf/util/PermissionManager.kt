@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Environment
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -18,14 +19,14 @@ class PermissionManager @Inject constructor(
      * 适配了 Android 13 (API 33) 的权限拆分逻辑
      */
     fun isStoragePermissionGranted(): Boolean {
-        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Android 13+ 需要检查媒体权限（根据你的 SmartPDF 需求，这里通常选 IMAGES 或 DOCUMENTS）
-            Manifest.permission.READ_MEDIA_IMAGES
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // ✨ Android 11 (API 30) 及以上：检查是否拥有“所有文件访问权限”
+            Environment.isExternalStorageManager()
         } else {
-            // Android 12 及以下使用旧权限
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            // Android 10 及以下：检查传统的 READ_EXTERNAL_STORAGE
+            val permission = Manifest.permission.READ_EXTERNAL_STORAGE
+            ContextCompat.checkSelfPermission(context, permission) ==
+                    PackageManager.PERMISSION_GRANTED
         }
-        return ContextCompat.checkSelfPermission(context, permission) ==
-                PackageManager.PERMISSION_GRANTED
     }
 }

@@ -50,6 +50,8 @@ class MainActivity : ComponentActivity() {
         lifecycle.addObserver(viewModel.createPermissionObserver {
             permissionManager.isStoragePermissionGranted()
         })
+
+//        lifecycle.addObserver(viewModel.createPermissionObserver(this))
     }
 
     override fun onNewIntent(intent: Intent) {

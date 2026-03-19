@@ -66,7 +66,6 @@ fun MainScreen(
     val currentOrder by viewModel.sortOrder.collectAsState()
 
     // 权限与扫描逻辑
-    LaunchedEffect(Unit) { viewModel.checkPermission(context) }
     LaunchedEffect(viewModel.hasFileAccess) {
         if (viewModel.hasFileAccess) viewModel.scanPdfs(context)
     }

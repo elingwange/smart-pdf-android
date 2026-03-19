@@ -1,13 +1,12 @@
 package com.quantumstudio.smartpdf.ui.features.main
 
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
-import android.os.Environment
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.core.content.ContextCompat
+import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quantumstudio.smartpdf.data.model.PdfFile
@@ -19,13 +18,13 @@ import com.quantumstudio.smartpdf.ui.common.RefreshPermissionObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -40,22 +39,50 @@ class MainViewModel @Inject constructor(
     private val themeRepository: ThemeRepository
 ) : ViewModel() {
 
-    private val _refreshSignal = MutableSharedFlow<Unit>(replay = 1)
-    fun createPermissionObserver(checkPermission: () -> Boolean) =
-        RefreshPermissionObserver(
+    // 是否拥有权限的状态
+    var hasFileAccess by mutableStateOf(false)
+        private set
+    private val _pdfFiles = MutableStateFlow<List<PdfFile>>(emptyList())
+    val pdfFiles = _pdfFiles.asStateFlow()
+
+    fun scanPdfs(context: Context) {
+        if (!hasFileAccess) return
+        viewModelScope.launch {
+            Log.e("---xxxxxxxx", "scanning begin...")
+            val scanned = pdfRepository.getAllPdfs(context)
+            Log.e("---xxxxxxxx", "scanning end!")
+
+            // 直接发出新的 List 即可触发 UI 更新
+            _pdfFiles.value = scanned
+        }
+    }
+
+    fun createPermissionObserver(checkPermission: () -> Boolean): DefaultLifecycleObserver {
+        return RefreshPermissionObserver(
             checkPermission = checkPermission,
-            onPermissionGranted = { _refreshSignal.tryEmit(Unit) }
+            onPermissionGranted = {
+                hasFileAccess = true
+            }
         )
+    }
 
-    // TODO: 后续替换列表和搜索数据流
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val pdfFilesFlow = _refreshSignal.flatMapLatest { pdfRepository.getAllPdfsFlow() }
-
-
-    //=============== searching ===============
-    // 1. 原始数据流（来自数据库）
-    private val _allPdfsFlow = pdfRepository.getAllPdfsFlow()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val pdfFilesFlow = snapshotFlow { hasFileAccess } // 1. 将 Compose 状态转为 Flow
+        .flatMapLatest { hasAccess ->
+            if (hasAccess) {
+                // 2. 只有当权限为 true 时，才接入数据库的长连接流
+                pdfRepository.getAllPdfsFlow()
+            } else {
+                // 3. 没权限时，直接发射空列表，断开数据库连接
+                flowOf(emptyList())
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     // 2. 搜索词状态
     private val _searchQuery = MutableStateFlow("")
@@ -63,8 +90,8 @@ class MainViewModel @Inject constructor(
 
     // 3. 核心：通过 combine 实时计算搜索结果
     val searchResult = _searchQuery
-        .debounce(200) // 防抖，防止输入太快卡顿
-        .combine(_allPdfsFlow) { query, allFiles ->
+        .debounce(300) // 防抖，防止输入太快卡顿
+        .combine(pdfFilesFlow) { query, allFiles ->
             if (query.isBlank()) {
                 emptyList() // 没输入时不显示结果
             } else {
@@ -114,34 +141,6 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    // 改用 StateFlow
-    private val _pdfFiles = MutableStateFlow<List<PdfFile>>(emptyList())
-    val pdfFiles = _pdfFiles.asStateFlow()
-
-    // 是否拥有权限的状态
-    var hasFileAccess by mutableStateOf(false)
-        private set
-
-    // 检查权限
-    fun checkPermission(context: Context) {
-        hasFileAccess = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager()
-        } else {
-            ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-        }
-    }
-
-    fun scanPdfs(context: Context) {
-        if (!hasFileAccess) return
-        viewModelScope.launch {
-            val scanned = pdfRepository.getAllPdfs(context)
-            // 直接发出新的 List 即可触发 UI 更新
-            _pdfFiles.value = scanned
-        }
-    }
 
     fun toggleFavorite(path: String) {
         viewModelScope.launch {
