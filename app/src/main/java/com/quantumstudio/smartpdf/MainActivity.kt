@@ -13,7 +13,7 @@ import androidx.navigation.NavHostController
 import com.quantumstudio.smartpdf.ui.SmartPDFRoot
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsViewModel
-import com.quantumstudio.smartpdf.ui.features.viewer.ReaderViewModel
+import com.quantumstudio.smartpdf.ui.features.reader.ReaderViewModel
 import com.quantumstudio.smartpdf.ui.navigation.AppNavHost
 import com.quantumstudio.smartpdf.util.PermissionManager
 import com.quantumstudio.smartpdf.util.installCustomExitAnimation

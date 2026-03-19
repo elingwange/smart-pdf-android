@@ -28,9 +28,7 @@ fun MainTopBar(
     currentPage: Int,
     onSearchClick: () -> Unit,
     onSortClick: () -> Unit
-) { // 修改这里：接收 Int 类型的索引
-    // 根据索引判断显示哪种 TopBar
-    // 假设索引 3 是设置页
+) {
     if (currentPage == 3) {
         TopAppBar(
             title = {

@@ -45,7 +45,7 @@ fun MainScreen(
         if (viewModel.hasFileAccess) viewModel.scanPdfs(context)
     }
 
-    // ✨ 新增：监听 ViewModel 发出的 UI 事件
+    // 监听 ViewModel 发出的 UI 事件
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
