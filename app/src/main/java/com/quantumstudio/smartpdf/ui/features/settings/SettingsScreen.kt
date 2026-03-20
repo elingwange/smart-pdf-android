@@ -43,8 +43,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.quantumstudio.smartpdf.R
 import com.quantumstudio.smartpdf.ui.features.settings.components.DefaultAppGuideDialog
 import com.quantumstudio.smartpdf.ui.features.settings.components.LanguageSelectionDialog
 import com.quantumstudio.smartpdf.ui.features.settings.components.ThemeSelectionDialog
@@ -99,28 +101,46 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             .padding(16.dp)
             .verticalScroll(rememberScrollState()) // 支持长页面滚动
     ) {
-        SettingSection(title = "General") {
-            SettingRow(Icons.Outlined.Folder, "File Manager") { openSystemFileManager(context) }
+        SettingSection(title = "General") { //
+            SettingRow(
+                Icons.Outlined.Folder,
+                stringResource(R.string.file_manager)
+            ) { openSystemFileManager(context) }
             SettingDivider()
-            SettingRow(Icons.Outlined.Palette, "Theme Mode") { activeDialog = SettingsDialog.THEME }
+            SettingRow(Icons.Outlined.Palette, stringResource(R.string.theme_mode)) {
+                activeDialog = SettingsDialog.THEME
+            }
             SettingDivider()
-            SettingRow(Icons.Outlined.SettingsSuggest, "Set as Default") {
+            SettingRow(Icons.Outlined.SettingsSuggest, stringResource(R.string.set_as_default)) {
                 activeDialog = SettingsDialog.DEFAULT_GUIDE
             }
             SettingDivider()
-            SettingRow(Icons.Outlined.Language, "Language") {
+            SettingRow(Icons.Outlined.Language, stringResource(R.string.language)) {
                 activeDialog = SettingsDialog.LANGUAGE
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
         SettingSection(title = "About") {
-            SettingRow(Icons.Outlined.ThumbUpOffAlt, "Rate us") { openPlayStore(context) }
+            SettingRow(
+                Icons.Outlined.ThumbUpOffAlt,
+                stringResource(R.string.rate_us)
+            ) { openPlayStore(context) }
             SettingDivider()
-            SettingRow(Icons.Outlined.Feedback, "Feedback") { sendFeedbackEmail(context) }
+            SettingRow(
+                Icons.Outlined.Feedback,
+                stringResource(R.string.feedback)
+            ) { sendFeedbackEmail(context) }
             SettingDivider()
-            SettingRow(Icons.Outlined.PrivacyTip, "Privacy policy") { openPrivacyPolicy(context) }
+            SettingRow(
+                Icons.Outlined.PrivacyTip,
+                stringResource(R.string.private_policy)
+            ) { openPrivacyPolicy(context) }
             SettingDivider()
-            SettingRow(Icons.Outlined.Info, "Version", subtitle = appVersion) {}
+            SettingRow(
+                Icons.Outlined.Info,
+                stringResource(R.string.version),
+                subtitle = appVersion
+            ) {}
         }
     }
 }

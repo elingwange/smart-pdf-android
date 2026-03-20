@@ -1,5 +1,6 @@
 package com.quantumstudio.smartpdf.ui
 
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -7,6 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.os.LocaleListCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsViewModel
@@ -21,6 +23,20 @@ fun SmartPDFRoot(
     // content 接收一个 controller 参数
     content: @Composable (NavHostController) -> Unit
 ) {
+    val currentLanguage by settingsViewModel.currentLanguage.collectAsState()
+
+    LaunchedEffect(currentLanguage) {
+
+        println("DEBUG: Language changed to $currentLanguage")
+        
+        // 确保每次语言状态改变时，通知系统应用 Locale
+        val appLocale = if (currentLanguage == "system") {
+            LocaleListCompat.getEmptyLocaleList()
+        } else {
+            LocaleListCompat.forLanguageTags(currentLanguage)
+        }
+        AppCompatDelegate.setApplicationLocales(appLocale)
+    }
     // 当控制器创建好后，通知外部（Activity）
     LaunchedEffect(navController) {
         onCreated(navController)

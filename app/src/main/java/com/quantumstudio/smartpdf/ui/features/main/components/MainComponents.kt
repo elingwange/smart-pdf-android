@@ -27,10 +27,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
-import com.quantumstudio.smartpdf.ui.features.settings.components.PermissionGuideScreen
+import com.quantumstudio.smartpdf.R
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsScreen
+import com.quantumstudio.smartpdf.ui.features.settings.components.PermissionGuideScreen
 import com.quantumstudio.smartpdf.ui.theme.PdfRed
 import com.quantumstudio.smartpdf.util.CommonUtils
 import java.io.File
@@ -62,10 +64,10 @@ fun MainPager(
 @Composable
 fun AppBottomNavigation(currentPage: Int, onTabSelected: (Int) -> Unit) {
     val items = listOf(
-        "Home" to Icons.Default.Home,
-        "Favorite" to Icons.Default.Favorite,
-        "Recent" to Icons.Default.History,
-        "Settings" to Icons.Default.Settings
+        stringResource(R.string.home) to Icons.Default.Home,
+        stringResource(R.string.favorites) to Icons.Default.Favorite,
+        stringResource(R.string.recents) to Icons.Default.History,
+        stringResource(R.string.settings) to Icons.Default.Settings
     )
 
     NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
