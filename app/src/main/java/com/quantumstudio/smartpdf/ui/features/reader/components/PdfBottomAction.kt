@@ -1,5 +1,6 @@
-package com.quantumstudio.smartpdf.ui.components
+package com.quantumstudio.smartpdf.ui.features.reader.components
 
+import android.R
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +25,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.quantumstudio.smartpdf.data.model.PdfFile
@@ -32,7 +35,7 @@ import com.quantumstudio.smartpdf.util.FileUtils
 
 data class MenuOption(
     val title: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val icon: ImageVector,
     val onClick: () -> Unit
 )
 
@@ -88,7 +91,7 @@ fun PdfHeaderSection(pdf: PdfFile) {
     ) {
         // 重用之前的 PDF 图标逻辑
         Icon(
-            painter = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_report_image),
+            painter = painterResource(id = R.drawable.ic_menu_report_image),
             contentDescription = null,
             tint = Color.Red,
             modifier = Modifier.size(40.dp)

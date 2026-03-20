@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.features.reader
+package com.quantumstudio.smartpdf.ui.features.reader.components
 
 import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
@@ -27,9 +27,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.quantumstudio.smartpdf.ui.components.BottomActionIcon
-import com.quantumstudio.smartpdf.ui.components.BrightnessSliderLayout
-import com.quantumstudio.smartpdf.ui.components.JumpPageLayout
 
 
 @Composable

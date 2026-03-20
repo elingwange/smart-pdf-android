@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.components
+package com.quantumstudio.smartpdf.ui.features.main.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -17,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 
 
 @Composable
@@ -25,7 +28,7 @@ fun PdfDeleteDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
@@ -57,10 +60,10 @@ fun PdfDeleteDialog(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     // 取消按钮
-                    androidx.compose.material3.Button(
+                    Button(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f),
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF3D3D3D) // 截图中的深灰按钮
                         ),
                         shape = RoundedCornerShape(24.dp)
@@ -69,10 +72,10 @@ fun PdfDeleteDialog(
                     }
 
                     // 删除按钮
-                    androidx.compose.material3.Button(
+                    Button(
                         onClick = onConfirm,
                         modifier = Modifier.weight(1f),
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFF44336) // 截图中的红色按钮
                         ),
                         shape = RoundedCornerShape(24.dp)

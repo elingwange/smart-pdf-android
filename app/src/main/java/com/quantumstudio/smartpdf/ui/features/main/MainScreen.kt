@@ -21,7 +21,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.quantumstudio.smartpdf.ui.common.UiEvent
-import com.quantumstudio.smartpdf.ui.components.SortByDialog
+import com.quantumstudio.smartpdf.ui.features.main.components.SortByDialog
+import com.quantumstudio.smartpdf.ui.features.main.components.AppBottomNavigation
+import com.quantumstudio.smartpdf.ui.features.main.components.MainPager
+import com.quantumstudio.smartpdf.ui.features.main.components.MainSearchOverlay
+import com.quantumstudio.smartpdf.ui.features.main.components.MainTopBar
 import kotlinx.coroutines.launch
 
 @Composable

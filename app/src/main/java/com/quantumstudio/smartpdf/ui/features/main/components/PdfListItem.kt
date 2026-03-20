@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.components
+package com.quantumstudio.smartpdf.ui.features.main.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box

@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.features.main
+package com.quantumstudio.smartpdf.ui.features.main.components
 
 import PdfInfoDialog
 import android.net.Uri
@@ -18,10 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.quantumstudio.smartpdf.data.model.PdfFile
-import com.quantumstudio.smartpdf.ui.components.MenuAction
-import com.quantumstudio.smartpdf.ui.components.PdfDeleteDialog
-import com.quantumstudio.smartpdf.ui.components.PdfListItem
-import com.quantumstudio.smartpdf.ui.components.PdfRenameDialog
+import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
 import java.io.File
 

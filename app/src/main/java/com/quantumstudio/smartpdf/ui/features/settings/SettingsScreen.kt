@@ -45,9 +45,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.quantumstudio.smartpdf.ui.components.DefaultAppGuideDialog
-import com.quantumstudio.smartpdf.ui.components.LanguageSelectionDialog
-import com.quantumstudio.smartpdf.ui.components.ThemeSelectionDialog
+import com.quantumstudio.smartpdf.ui.features.settings.components.DefaultAppGuideDialog
+import com.quantumstudio.smartpdf.ui.features.settings.components.LanguageSelectionDialog
+import com.quantumstudio.smartpdf.ui.features.settings.components.ThemeSelectionDialog
 import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.openAppInfoSettings
 import com.quantumstudio.smartpdf.util.CommonUtils.openPlayStore

@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.components
+package com.quantumstudio.smartpdf.ui.features.main.components
 
 
 import androidx.compose.material3.DropdownMenuItem

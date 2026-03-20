@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.components
+package com.quantumstudio.smartpdf.ui.features.reader.components
 
 
 import androidx.compose.foundation.layout.size

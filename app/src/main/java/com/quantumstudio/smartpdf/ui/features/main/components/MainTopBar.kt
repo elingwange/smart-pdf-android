@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.features.main
+package com.quantumstudio.smartpdf.ui.features.main.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -17,6 +17,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import com.quantumstudio.smartpdf.ui.theme.PdfRed
 import com.quantumstudio.smartpdf.util.CommonUtils.openSystemFileManager
@@ -51,7 +52,7 @@ fun MainTopBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeTopBar(currentPage: Int, onSearchClick: () -> Unit, onSortClick: () -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     Column(modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)) {
         TopAppBar(

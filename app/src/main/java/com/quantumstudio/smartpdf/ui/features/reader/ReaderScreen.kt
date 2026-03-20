@@ -4,6 +4,7 @@ import PdfInfoDialog
 import android.app.Activity
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -23,6 +24,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.github.barteksc.pdfviewer.PDFView
+import com.quantumstudio.smartpdf.ui.features.reader.components.PdfScrollbarThumb
+import com.quantumstudio.smartpdf.ui.features.reader.components.ReaderBottomPanel
+import com.quantumstudio.smartpdf.ui.features.reader.components.ReaderTopBar
 import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
 import com.quantumstudio.smartpdf.util.ShortcutUtils
 import kotlinx.coroutines.delay
@@ -188,10 +192,10 @@ fun PdfReaderScreen(
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         ShortcutUtils.addPdfToHomeScreen(context, pdf)
                     } else {
-                        android.widget.Toast.makeText(
+                        Toast.makeText(
                             context,
                             "Not supported",
-                            android.widget.Toast.LENGTH_SHORT
+                            Toast.LENGTH_SHORT
                         ).show()
                     }
                 }

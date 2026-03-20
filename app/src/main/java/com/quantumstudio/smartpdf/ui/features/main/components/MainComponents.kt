@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.features.main
+package com.quantumstudio.smartpdf.ui.features.main.components
 
 import SearchScreen
 import android.net.Uri
@@ -28,7 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
-import com.quantumstudio.smartpdf.ui.components.PermissionGuideScreen
+import com.quantumstudio.smartpdf.ui.features.settings.components.PermissionGuideScreen
+import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsScreen
 import com.quantumstudio.smartpdf.ui.theme.PdfRed
 import com.quantumstudio.smartpdf.util.CommonUtils

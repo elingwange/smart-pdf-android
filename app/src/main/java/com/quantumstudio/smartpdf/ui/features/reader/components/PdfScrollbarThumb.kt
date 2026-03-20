@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.features.reader
+package com.quantumstudio.smartpdf.ui.features.reader.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
