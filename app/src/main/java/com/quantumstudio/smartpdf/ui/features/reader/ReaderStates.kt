@@ -33,6 +33,14 @@ class ReaderUiState(
 
     // --- 逻辑控制方法 ---
 
+    // 亮度范围 0f - 1f
+    var currentBrightness by mutableFloatStateOf(0.5f)
+        private set
+
+    fun updateBrightness(value: Float) {
+        currentBrightness = value
+    }
+
     fun toggleUi() {
         isUiVisible = !isUiVisible
         if (!isUiVisible) activePanel = ReaderPanel.None
@@ -49,9 +57,31 @@ class ReaderUiState(
         isNightMode = enabled
     }
 
-    fun toggleBrightness() {
-        activePanel =
-            if (activePanel == ReaderPanel.Brightness) ReaderPanel.None else ReaderPanel.Brightness
+    // 修改打开逻辑：在打开亮度面板时，允许外部传入当前系统亮度
+    fun toggleBrightness(systemBrightness: Float) {
+        if (activePanel != ReaderPanel.Brightness) {
+            currentBrightness = if (systemBrightness < 0f) {
+                // 如果系统是自动亮度(-1f)，尝试给个 0.5f 或者更接近真实感的默认值
+                0.5f
+            } else {
+                systemBrightness
+            }
+            activePanel = ReaderPanel.Brightness
+        } else {
+            activePanel = ReaderPanel.None
+        }
+    }
+
+    fun resetToSystemBrightness() {
+        currentBrightness = -1f // 使用 -1f 作为标志位
+    }
+
+    // 检查当前是否处于系统自动模式
+    val isAutoBrightness: Boolean
+        get() = currentBrightness < 0f
+
+    fun setSystemAutoBrightness() {
+        currentBrightness = -1f // 设为 -1f 标志位
     }
 
     fun toggleJump() {
@@ -63,26 +93,30 @@ class ReaderUiState(
     }
 
     // ✨ 核心：定义如何保存和恢复状态
+
     companion object {
         val Saver: Saver<ReaderUiState, *> = Saver(
-            // save: 将类属性拆解为 List 存入 Bundle
-            save = { listOf(it.isUiVisible, it.isNightMode, it.activePanel.name) },
-            // restore: 从 List 中读取数据并重建 ReaderUiState 对象
+            // 1. 保存时增加 currentBrightness (下标为 3)
+            save = {
+                listOf(
+                    it.isUiVisible,
+                    it.isNightMode,
+                    it.activePanel.name,
+                    it.currentBrightness
+                )
+            },
             restore = { savedList ->
                 val list = savedList as List<*>
                 ReaderUiState(
                     initialIsUiVisible = list[0] as Boolean,
                     initialIsNightMode = list[1] as Boolean
                 ).apply {
-                    // 恢复面板状态
                     val panelName = list[2] as String
-                    if (panelName != ReaderPanel.None.name) {
-                        // 根据保存的名字恢复枚举值
-                        when (panelName) {
-                            ReaderPanel.Brightness.name -> toggleBrightness()
-                            ReaderPanel.Jump.name -> toggleJump()
-                        }
-                    }
+                    activePanel = ReaderPanel.valueOf(panelName)
+
+                    // 2. 恢复亮度值
+                    val savedBrightness = list[3] as Float
+                    updateBrightness(savedBrightness)
                 }
             }
         )

@@ -13,27 +13,17 @@ import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.quantumstudio.smartpdf.ui.features.reader.ReaderUiState
 
 @Composable
-fun BrightnessSliderLayout(activity: Activity?) {
-    // 获取当前窗口亮度 (0.0f 到 1.0f)
-    // 如果系统亮度为默认值 (-1.0f)，我们取 0.5f 作为起始滑块位置
-    var brightness by remember {
-        val current = activity?.window?.attributes?.screenBrightness ?: 0.5f
-        mutableStateOf(if (current < 0) 0.5f else current)
-    }
+fun BrightnessSliderLayout(activity: Activity?, uiState: ReaderUiState) {
 
     Column(
         modifier = Modifier
@@ -52,7 +42,6 @@ fun BrightnessSliderLayout(activity: Activity?) {
                 tint = Color.Gray,
                 modifier = Modifier.size(14.dp)
             )
-
             // 中间文字
             Text(
                 text = "Brightness",
@@ -62,7 +51,6 @@ fun BrightnessSliderLayout(activity: Activity?) {
                     .weight(1f)
                     .padding(start = 12.dp)
             )
-
             // 右侧大太阳
             Icon(
                 imageVector = Icons.Default.WbSunny,
@@ -74,22 +62,16 @@ fun BrightnessSliderLayout(activity: Activity?) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 亮度调节滑块
         Slider(
-            value = brightness,
+            value = if (uiState.currentBrightness < 0f) 0.5f else uiState.currentBrightness,
             onValueChange = { newValue ->
-                brightness = newValue
-                // 实时更新当前 Activity 的窗口亮度
-                val layoutParams = activity?.window?.attributes
-                layoutParams?.screenBrightness = newValue
-                activity?.window?.attributes = layoutParams
+                uiState.updateBrightness(newValue)
+                activity?.let {
+                    val lp = it.window.attributes
+                    lp.screenBrightness = newValue
+                    it.window.attributes = lp
+                }
             },
-            // 定制滑块颜色，对齐 UI 设计
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),      // 滑块圆点颜色
-                activeTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f), // 已选中轨道颜色
-                inactiveTrackColor = Color(0xFF333333) // 未选中轨道颜色（深灰）
-            ),
             modifier = Modifier.fillMaxWidth()
         )
     }

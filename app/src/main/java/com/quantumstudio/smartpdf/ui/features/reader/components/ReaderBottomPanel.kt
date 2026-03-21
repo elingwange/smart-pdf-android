@@ -13,18 +13,19 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FindInPage
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.ScreenRotation
-import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.quantumstudio.smartpdf.ui.features.reader.PdfViewState
 import com.quantumstudio.smartpdf.ui.features.reader.ReaderPanel
@@ -42,6 +43,8 @@ fun ReaderBottomPanel(
     onRotationClick: () -> Unit,
     activity: Activity?
 ) {
+    val context = LocalContext.current
+
     AnimatedVisibility(
         visible = uiState.isUiVisible,
         enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -64,7 +67,7 @@ fun ReaderBottomPanel(
             ) {
                 // 内部条件渲染：直接从 uiState 和 pdfState 拿数据
                 when (uiState.activePanel) {
-                    ReaderPanel.Brightness -> BrightnessSliderLayout(activity)
+                    ReaderPanel.Brightness -> BrightnessSliderLayout(activity, uiState)
                     ReaderPanel.Jump -> JumpPageLayout(
                         currentPage = pdfState.currentPage,
                         totalPages = pdfState.totalPages,
@@ -91,10 +94,27 @@ fun ReaderBottomPanel(
                     }
 
                     BottomActionIcon(
-                        icon = Icons.Default.WbSunny,
+                        icon = Icons.Default.Brightness6,
                         tint = if (uiState.activePanel == ReaderPanel.Brightness)
                             MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        onClick = { uiState.toggleBrightness() }
+                        onClick = {
+                            val windowBrightness =
+                                activity?.window?.attributes?.screenBrightness ?: -1f
+                            val finalBrightness = if (windowBrightness < 0f) {
+                                // ✨ 读取系统全局亮度设置 (范围 0-255) 并转换为 0-1f
+                                try {
+                                    android.provider.Settings.System.getInt(
+                                        context.contentResolver,
+                                        android.provider.Settings.System.SCREEN_BRIGHTNESS
+                                    ) / 255f
+                                } catch (e: Exception) {
+                                    0.5f // 保底方案
+                                }
+                            } else {
+                                windowBrightness
+                            }
+                            uiState.toggleBrightness(finalBrightness)
+                        }
                     )
 
                     BottomActionIcon(

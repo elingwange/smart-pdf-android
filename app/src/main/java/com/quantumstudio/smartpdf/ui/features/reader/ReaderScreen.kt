@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -49,6 +50,30 @@ fun PdfReaderScreen(
     // 2. 状态大管家实例化
     val uiState = rememberReaderUiState()
     val pdfState = rememberPdfViewState()
+
+    // ✨ 核心逻辑：退出时恢复系统亮度
+    DisposableEffect(Unit) {
+        // 当组件进入屏幕时（可选操作，比如锁定屏幕常亮）
+        onDispose {
+            // 当组件从屏幕卸载（退出阅读页面）时执行
+            activity?.let {
+                val lp = it.window.attributes
+                lp.screenBrightness = -1f // 🚀 关键：恢复为 -1f，交还控制权给系统
+                it.window.attributes = lp
+            }
+        }
+    }
+    // ✨ 新增：状态恢复后的物理同步
+    LaunchedEffect(uiState.currentBrightness) {
+        // 只有当亮度不是默认初始值，或者处于手动调节模式时，才同步给系统
+        if (uiState.currentBrightness != 0.5f || uiState.activePanel == ReaderPanel.Brightness) {
+            activity?.let {
+                val lp = it.window.attributes
+                lp.screenBrightness = uiState.currentBrightness
+                it.window.attributes = lp
+            }
+        }
+    }
 
     // 3. 初始加载逻辑
     LaunchedEffect(pdfPath) { viewModel.loadPdfForReader(pdfPath) }
@@ -111,11 +136,16 @@ fun PdfReaderScreen(
                     pdfView.fromUri(uri)
                         .nightMode(uiState.isNightMode)
                         .defaultPage(pdfState.currentPage)
+                        // ✨ 关键修复：强制每一页适配当前屏幕尺寸，防止旋转后的比例错误
+                        .fitEachPage(true)
+                        .pageFling(true)    // 丝滑翻页
                         .onPageChange { p, c -> pdfState.updatePage(p, c) }
                         .onPageScroll { p, o -> pdfState.updateScroll(p, o) }
                         .onLoad {
                             pdfState.isFirstLoad = false
                             pdfState.lastLoadedUri = uri
+                            // ✨ 额外保险：加载完成后，手动重置缩放级别为 1.0
+                            pdfView.zoomTo(1f)
                             viewModel.markAsRead(currentPdf)
                         }
                         .load()
