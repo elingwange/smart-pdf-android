@@ -1,7 +1,9 @@
 package com.quantumstudio.smartpdf.util
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -14,6 +16,19 @@ import java.util.Date
 import java.util.Locale
 
 object CommonUtils {
+    /**
+     * 切换屏幕方向：横屏 <-> 竖屏
+     */
+    fun toggleScreenOrientation(activity: Activity?) {
+        activity?.let {
+            it.requestedOrientation =
+                if (it.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
+                    ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                } else {
+                    ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                }
+        }
+    }
 
     // 格式化日期：2026年1月25日
     fun formatDate(timestamp: Long): String {

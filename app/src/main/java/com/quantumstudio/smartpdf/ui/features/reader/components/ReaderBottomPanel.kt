@@ -1,5 +1,3 @@
-package com.quantumstudio.smartpdf.ui.features.reader.components
-
 import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -25,72 +23,85 @@ import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-
+import com.quantumstudio.smartpdf.ui.features.reader.PdfViewState
+import com.quantumstudio.smartpdf.ui.features.reader.ReaderPanel
+import com.quantumstudio.smartpdf.ui.features.reader.ReaderUiState
+import com.quantumstudio.smartpdf.ui.features.reader.components.BrightnessSliderLayout
+import com.quantumstudio.smartpdf.ui.features.reader.components.JumpPageLayout
 
 @Composable
 fun ReaderBottomPanel(
     modifier: Modifier = Modifier,
-    isVisible: Boolean,
-    isFavorite: Boolean,
-    isNightMode: Boolean,
-    currentPage: Int,
-    totalPages: Int,
-    showBrightnessSlider: Boolean,
-    showJumpLayout: Boolean,
-    onToggleBrightness: () -> Unit,
-    onToggleJump: () -> Unit,
-    onToggleNightMode: () -> Unit,
+    uiState: ReaderUiState,    // UI 交互管家
+    pdfState: PdfViewState,    // PDF 数据管家
+    isFavorite: Boolean,       // 属于业务数据，保留
     onToggleFavorite: () -> Unit,
     onRotationClick: () -> Unit,
-    onJumpToPage: (Int) -> Unit,
-    activity: Activity? // 用于亮度控制
+    activity: Activity?
 ) {
     AnimatedVisibility(
-        visible = isVisible,
+        visible = uiState.isUiVisible,
         enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
         exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
         modifier = modifier.fillMaxWidth()
     ) {
         Surface(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(horizontal = 26.dp, vertical = 26.dp)
+                .navigationBarsPadding() // 确保在系统导航栏上方
                 .fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
             tonalElevation = 8.dp
         ) {
-            Column(modifier = Modifier.animateContentSize()) {
-                // 内部条件渲染：亮度条 vs 跳转框
-                when {
-                    showBrightnessSlider -> BrightnessSliderLayout(activity)
-                    showJumpLayout -> JumpPageLayout(currentPage, totalPages, onJumpToPage)
+            Column(
+                modifier = Modifier
+                    .animateContentSize()
+                    .padding(vertical = 8.dp)
+            ) {
+                // 内部条件渲染：直接从 uiState 和 pdfState 拿数据
+                when (uiState.activePanel) {
+                    ReaderPanel.Brightness -> BrightnessSliderLayout(activity)
+                    ReaderPanel.Jump -> JumpPageLayout(
+                        currentPage = pdfState.currentPage,
+                        totalPages = pdfState.totalPages,
+                        onConfirm = { target ->
+                            pdfState.pdfView?.jumpTo(target)
+                            uiState.closePanels()
+                        }
+                    )
+
+                    ReaderPanel.None -> { /* 保持空白 */
+                    }
                 }
 
                 Row(
-                    modifier = Modifier
-                        .navigationBarsPadding()
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     BottomActionIcon(Icons.Default.ScreenRotation) { onRotationClick() }
 
-                    BottomActionIcon(if (isNightMode) Icons.Default.LightMode else Icons.Default.DarkMode) {
-                        onToggleNightMode()
+                    BottomActionIcon(if (uiState.isNightMode) Icons.Default.LightMode else Icons.Default.DarkMode) {
+                        uiState.toggleNightMode()
+                        pdfState.lastLoadedUri = null
                     }
 
                     BottomActionIcon(
                         icon = Icons.Default.WbSunny,
-                        tint = if (showBrightnessSlider) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        onClick = onToggleBrightness
+                        tint = if (uiState.activePanel == ReaderPanel.Brightness)
+                            MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        onClick = { uiState.toggleBrightness() }
                     )
 
                     BottomActionIcon(
                         icon = Icons.Default.FindInPage,
-                        tint = if (showJumpLayout) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        onClick = onToggleJump
+                        tint = if (uiState.activePanel == ReaderPanel.Jump)
+                            MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        onClick = { uiState.toggleJump() }
                     )
 
                     BottomActionIcon(

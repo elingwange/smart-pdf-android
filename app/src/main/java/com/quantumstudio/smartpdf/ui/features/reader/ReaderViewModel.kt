@@ -48,7 +48,13 @@ class ReaderViewModel @Inject constructor(
 
     fun toggleFavorite(pdf: PdfFile) {
         viewModelScope.launch {
+            // 1. 执行数据库更新操作
             pdfActions.toggleFavorite(pdf)
+
+            // 2. ✨ 关键：重新查一次数据库，或者手动创建一个 copy 赋给 currentReadingPdf
+            // 只有 currentReadingPdf 指向了一个新的对象地址，Compose 才会感知到变化
+            val updatedPdf = pdfRepository.getOrInsertPdf(pdf.path)
+            currentReadingPdf = updatedPdf
         }
     }
 

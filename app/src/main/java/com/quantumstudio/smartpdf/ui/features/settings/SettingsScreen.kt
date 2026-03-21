@@ -143,6 +143,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             ) {}
         }
     }
+    
 }
 
 @Composable

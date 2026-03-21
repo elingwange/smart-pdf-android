@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Smart PDF</string>
+    <string name="app_name" translatable="false">Smart PDF</string>
     <string name="home">Home</string>
     <string name="recents">Recents</string>
     <string name="favorites">Favorites</string>
