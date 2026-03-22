@@ -1,6 +1,3 @@
-package com.quantumstudio.smartpdf.ui.components
-
-
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -14,18 +11,18 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun BottomActionIcon(
     icon: ImageVector,
-    contentDescription: String? = null,
-    // ✨ 增加 tint 参数，允许外部传入颜色
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit
 ) {
-    IconButton(onClick = onClick) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(48.dp) // 确保点击区域足够大
+    ) {
         Icon(
             imageVector = icon,
-            contentDescription = contentDescription,
-            // ✨ 使用传入的 tint，而不是硬编码
+            contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(24.dp) // 图标本身的大小
         )
     }
 }

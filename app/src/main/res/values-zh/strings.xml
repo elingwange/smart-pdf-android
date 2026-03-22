@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Smart PDF</string>
+    <string name="home">主页</string>
+    <string name="recents">最近</string>
+    <string name="favorites">收藏</string>
+    <string name="settings">设置</string>
+
+    <string name="file_manager">文件管理器</string>
+    <string name="set_as_default">默认应用</string>
+    <string name="rate_us">评价</string>
+    <string name="feedback">意见反馈</string>
+    <string name="private_policy">隐私策略</string>
+    <string name="version">版本</string>
+    <string name="theme_mode">主题</string>
+    <string name="language">语言</string>
+</resources>

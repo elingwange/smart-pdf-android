@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.components
+package com.quantumstudio.smartpdf.ui.features.search.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons

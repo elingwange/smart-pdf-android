@@ -1,9 +1,8 @@
 package com.quantumstudio.smartpdf.ui.features.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,14 +24,11 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.SettingsSuggest
 import androidx.compose.material.icons.outlined.ThumbUpOffAlt
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,15 +36,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.quantumstudio.smartpdf.R
+import com.quantumstudio.smartpdf.ui.features.settings.components.DefaultAppGuideDialog
+import com.quantumstudio.smartpdf.ui.features.settings.components.LanguageSelectionDialog
+import com.quantumstudio.smartpdf.ui.features.settings.components.ThemeSelectionDialog
 import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.openAppInfoSettings
 import com.quantumstudio.smartpdf.util.CommonUtils.openPlayStore
@@ -56,37 +57,41 @@ import com.quantumstudio.smartpdf.util.CommonUtils.openPrivacyPolicy
 import com.quantumstudio.smartpdf.util.CommonUtils.openSystemFileManager
 import com.quantumstudio.smartpdf.util.CommonUtils.sendFeedbackEmail
 
+
+// 对话框类型
+enum class SettingsDialog {
+    THEME, LANGUAGE, DEFAULT_GUIDE
+}
+
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val currentTheme by viewModel.themeMode.collectAsState()
-    // 使用 remember 避免每次重组都去查询系统，提高性能
+
+    val context = LocalContext.current
     val appVersion = remember { CommonUtils.getAppVersionName(context) }
-    // 控制对话框显示的开关
-    var showThemeDialog by remember { mutableStateOf(false) }
-    // 第二步：根据状态判断是否显示对话框
-    if (showThemeDialog) {
-        ThemeSelectionDialog(
+    val currentTheme by viewModel.themeMode.collectAsState()
+    val currentLanguage by viewModel.currentLanguage.collectAsState(initial = "system")
+
+    var activeDialog by rememberSaveable { mutableStateOf<SettingsDialog?>(null) }
+    // 统一分发逻辑
+    when (activeDialog) {
+        SettingsDialog.THEME -> ThemeSelectionDialog(
             currentTheme = currentTheme,
-            onDismiss = { showThemeDialog = false }, // 点击外部消失
-            onSelect = { selectedMode ->
-                viewModel.setThemeMode(selectedMode) // 2. 调用 ViewModel 更新状态
-                showThemeDialog = false // 3. 选完后关闭
-            }
+            onDismiss = { activeDialog = null },
+            onSelect = { viewModel.setThemeMode(it); activeDialog = null }
         )
-    }
-    // 1. 渲染 Dialog
-    var showDefaultDialog by remember { mutableStateOf(false) }
-    if (showDefaultDialog) {
-        DefaultAppGuideDialog(
-            onDismiss = { showDefaultDialog = false },
-            onConfirm = {
-                showDefaultDialog = false
-                // ✨ 核心逻辑：触发选择器
-                //triggerDefaultPdfPicker(context)
-                openAppInfoSettings(context)
-            }
+
+        SettingsDialog.LANGUAGE -> LanguageSelectionDialog(
+            currentLanguage = currentLanguage,
+            onDismiss = { activeDialog = null },
+            onSelect = { viewModel.setLanguage(it); activeDialog = null }
         )
+
+        SettingsDialog.DEFAULT_GUIDE -> DefaultAppGuideDialog(
+            onDismiss = { activeDialog = null },
+            onConfirm = { openAppInfoSettings(context); activeDialog = null }
+        )
+
+        null -> {}
     }
 
     Column(
@@ -96,102 +101,71 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             .padding(16.dp)
             .verticalScroll(rememberScrollState()) // 支持长页面滚动
     ) {
-        // 第一组：通用设置
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), // 稍浅的卡片背景
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column {
-                SettingRow(Icons.Outlined.Folder, "File Manager") { /* 处理点击 */
-                    openSystemFileManager(context)
-                }
-                SettingDivider()
-                SettingRow(
-                    icon = Icons.Outlined.Palette,
-                    title = "Theme Mode"
-                ) { showThemeDialog = true }
-                SettingDivider()
-                SettingRow(
-                    Icons.Outlined.SettingsSuggest,
-                    "Set as Default"
-                ) { /* 处理点击 */showDefaultDialog = true }
-                // 在 SettingRow 之间插入
-                SettingDivider()
-                SettingRow(Icons.Outlined.Language, "Language") { /* 处理点击 */ }
+        SettingSection(title = "General") { //
+            SettingRow(
+                Icons.Outlined.Folder,
+                stringResource(R.string.file_manager)
+            ) { openSystemFileManager(context) }
+            SettingDivider()
+            SettingRow(Icons.Outlined.Palette, stringResource(R.string.theme_mode)) {
+                activeDialog = SettingsDialog.THEME
+            }
+            SettingDivider()
+            SettingRow(Icons.Outlined.SettingsSuggest, stringResource(R.string.set_as_default)) {
+                activeDialog = SettingsDialog.DEFAULT_GUIDE
+            }
+            SettingDivider()
+            SettingRow(Icons.Outlined.Language, stringResource(R.string.language)) {
+                activeDialog = SettingsDialog.LANGUAGE
             }
         }
-
         Spacer(modifier = Modifier.height(16.dp))
+        SettingSection(title = "About") {
+            SettingRow(
+                Icons.Outlined.ThumbUpOffAlt,
+                stringResource(R.string.rate_us)
+            ) { openPlayStore(context) }
+            SettingDivider()
+            SettingRow(
+                Icons.Outlined.Feedback,
+                stringResource(R.string.feedback)
+            ) { sendFeedbackEmail(context) }
+            SettingDivider()
+            SettingRow(
+                Icons.Outlined.PrivacyTip,
+                stringResource(R.string.private_policy)
+            ) { openPrivacyPolicy(context) }
+            SettingDivider()
+            SettingRow(
+                Icons.Outlined.Info,
+                stringResource(R.string.version),
+                subtitle = appVersion
+            ) {}
+        }
+    }
+    
+}
 
-        // 第二组：关于与反馈
+@Composable
+fun SettingSection(
+    title: String? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(modifier = Modifier.padding(top = 16.dp)) {
+        if (title != null) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+            )
+        }
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column {
-                SettingRow(Icons.Outlined.ThumbUpOffAlt, "Rate us") { /* 处理点击 */
-                    openPlayStore(context)
-                }
-                SettingDivider()
-                SettingRow(Icons.Outlined.Feedback, "Feedback") { /* 处理点击 */
-                    sendFeedbackEmail(context)
-                }
-                SettingDivider()
-                SettingRow(Icons.Outlined.PrivacyTip, "Privacy policy") { /* 处理点击 */
-                    openPrivacyPolicy(context)
-                }
-                SettingDivider()
-                SettingRow(
-                    icon = Icons.Outlined.Info,
-                    title = "Version",
-                    subtitle = appVersion
-                ) { /* 处理点击 */ }
-            }
-        }
-
-    }
-}
-
-@Composable
-fun ThemeSelectionDialog(
-    currentTheme: ThemeMode,
-    onDismiss: () -> Unit,
-    onSelect: (ThemeMode) -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Choose Theme") },
-        confirmButton = {}, // M3 规范列表选择通常不需要确认按钮，点选即关闭
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                ThemeOption("Follow System", currentTheme == ThemeMode.SYSTEM) {
-                    onSelect(ThemeMode.SYSTEM)
-                }
-                ThemeOption("Light", currentTheme == ThemeMode.LIGHT) {
-                    onSelect(ThemeMode.LIGHT)
-                }
-                ThemeOption("Dark", currentTheme == ThemeMode.DARK) {
-                    onSelect(ThemeMode.DARK)
-                }
-            }
-        }
-    )
-}
-
-@Composable
-fun ThemeOption(text: String, selected: Boolean, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        RadioButton(selected = selected, onClick = null) // onClick 为空，因为 Row 处理了点击
-        Spacer(Modifier.width(12.dp))
-        Text(text, style = MaterialTheme.typography.bodyLarge)
+            shape = RoundedCornerShape(12.dp),
+            content = content
+        )
     }
 }
 
@@ -220,15 +194,12 @@ fun SettingRow(
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(24.dp)
             )
-
             Spacer(modifier = Modifier.width(16.dp))
-
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
-
             if (subtitle != null) {
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
@@ -255,55 +226,6 @@ fun SettingDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
         thickness = 0.5.dp,
-        // 使用 outlineVariant 是 M3 的标准做法
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-    )
-}
-
-@Composable
-fun DefaultAppGuideDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            androidx.compose.material3.Button(
-                onClick = onConfirm,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)) // 使用你的主题红
-            ) {
-                Text("Okay", color = Color.White, style = MaterialTheme.typography.titleMedium)
-            }
-        },
-        title = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // 模拟截图中的 PDF 红色图标
-                Surface(
-                    modifier = Modifier.size(80.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFE53935)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text("PDF", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Spacer(modifier = Modifier.height(20.dp))
-                Text("Smart PDF", style = MaterialTheme.typography.headlineSmall)
-            }
-        },
-        text = {
-            Text(
-                text = "点击 Okay 后，请在系统设置中找到 ‘默认打开 (Set as default)’，并确保 ‘打开支持的链接’ 已开启。",
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        shape = RoundedCornerShape(24.dp),
-        containerColor = MaterialTheme.colorScheme.surface
     )
 }

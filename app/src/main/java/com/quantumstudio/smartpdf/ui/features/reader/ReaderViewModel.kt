@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.features.viewer
+package com.quantumstudio.smartpdf.ui.features.reader
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -7,13 +7,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
+import com.quantumstudio.smartpdf.ui.common.PdfActions
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class ReaderViewModel @Inject constructor(private val pdfRepository: PdfRepository) : ViewModel() {
+class ReaderViewModel @Inject constructor(
+    private val pdfRepository: PdfRepository,
+    private val pdfActions: PdfActions
+) : ViewModel() {
 
     // 存储当前正在阅读的文件状态
     var currentReadingPdf by mutableStateOf<PdfFile?>(null)
@@ -35,4 +39,23 @@ class ReaderViewModel @Inject constructor(private val pdfRepository: PdfReposito
             pdfRepository.updateProgress(path, page)
         }
     }
+
+    fun markAsRead(pdf: PdfFile) {
+        viewModelScope.launch {
+            pdfActions.markAsRead(pdf)
+        }
+    }
+
+    fun toggleFavorite(pdf: PdfFile) {
+        viewModelScope.launch {
+            // 1. 执行数据库更新操作
+            pdfActions.toggleFavorite(pdf)
+
+            // 2. ✨ 关键：重新查一次数据库，或者手动创建一个 copy 赋给 currentReadingPdf
+            // 只有 currentReadingPdf 指向了一个新的对象地址，Compose 才会感知到变化
+            val updatedPdf = pdfRepository.getOrInsertPdf(pdf.path)
+            currentReadingPdf = updatedPdf
+        }
+    }
+
 }

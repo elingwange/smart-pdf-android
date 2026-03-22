@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.components
+package com.quantumstudio.smartpdf.ui.features.settings.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

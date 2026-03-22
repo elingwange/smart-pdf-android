@@ -4,16 +4,16 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavHostController
 import com.quantumstudio.smartpdf.ui.SmartPDFRoot
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
+import com.quantumstudio.smartpdf.ui.features.reader.ReaderViewModel
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsViewModel
-import com.quantumstudio.smartpdf.ui.features.viewer.ReaderViewModel
 import com.quantumstudio.smartpdf.ui.navigation.AppNavHost
 import com.quantumstudio.smartpdf.util.PermissionManager
 import com.quantumstudio.smartpdf.util.installCustomExitAnimation
@@ -21,7 +21,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var permissionManager: PermissionManager
     private val mainViewModel: MainViewModel by viewModels()

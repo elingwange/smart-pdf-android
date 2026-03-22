@@ -1,4 +1,4 @@
-package com.quantumstudio.smartpdf.ui.components
+package com.quantumstudio.smartpdf.ui.features.search.components
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable

@@ -13,8 +13,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import com.quantumstudio.smartpdf.data.model.PdfFile
-import com.quantumstudio.smartpdf.ui.components.SearchItem
-import com.quantumstudio.smartpdf.ui.components.SearchTopBar
+import com.quantumstudio.smartpdf.ui.features.search.components.SearchItem
+import com.quantumstudio.smartpdf.ui.features.search.components.SearchTopBar
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.search.SearchEmptyState
 

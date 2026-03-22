@@ -11,8 +11,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.quantumstudio.smartpdf.ui.features.main.MainScreen
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
-import com.quantumstudio.smartpdf.ui.features.viewer.PdfReaderScreen
-import com.quantumstudio.smartpdf.ui.features.viewer.ReaderViewModel
+import com.quantumstudio.smartpdf.ui.features.reader.PdfReaderScreen
+import com.quantumstudio.smartpdf.ui.features.reader.ReaderViewModel
 
 
 @RequiresApi(Build.VERSION_CODES.N_MR1)
@@ -47,7 +47,6 @@ fun AppNavHost(
 
             PdfReaderScreen(
                 uri = uri,
-                mainViewModel = mainViewModel,
                 viewModel = readerViewModel,
                 onBack = { navController.popBackStack() }
             )

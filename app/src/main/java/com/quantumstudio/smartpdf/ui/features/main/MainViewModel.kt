@@ -13,11 +13,13 @@ import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.data.model.SortField
 import com.quantumstudio.smartpdf.data.model.SortOrder
 import com.quantumstudio.smartpdf.data.repository.PdfRepository
+import com.quantumstudio.smartpdf.ui.common.PdfActions
 import com.quantumstudio.smartpdf.ui.common.RefreshPermissionObserver
 import com.quantumstudio.smartpdf.ui.common.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,7 +36,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val pdfRepository: PdfRepository
+    private val pdfRepository: PdfRepository,
+    private val pdfActions: PdfActions
 ) : ViewModel() {
     var hasFileAccess by mutableStateOf(false)
         private set
@@ -61,7 +64,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    // ✨ 核心优化 1：数据源唯一化。直接从数据库拿流，只要库里变，这里秒变。
+    // 优化 1：数据源唯一化。直接从数据库拿流，只要库里变，这里秒变。
     @OptIn(ExperimentalCoroutinesApi::class)
     val allPdfsFlow = snapshotFlow { hasFileAccess }
         .distinctUntilChanged() // ✨ 只在权限真正发生切换时才重连数据库
@@ -80,11 +83,12 @@ class MainViewModel @Inject constructor(
         )
     }
 
-    // 2. 搜索词状态
+    // 搜索词状态
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
 
-    // 3. 核心：通过 combine 实时计算搜索结果
+    // 核心：通过 combine 实时计算搜索结果
+    @OptIn(FlowPreview::class)
     val searchResult = _searchQuery
         .debounce(300) // 防抖，防止输入太快卡顿
         .combine(allPdfsFlow) { query, allFiles ->
@@ -100,17 +104,15 @@ class MainViewModel @Inject constructor(
     }
     //=============== searching ===============
 
-    fun toggleFavorite(pdf: PdfFile) {
+    fun markAsRead(pdf: PdfFile) {
         viewModelScope.launch {
-            // 这一行执行完，Room 数据库会自动通知 allPdfsFlow 发射新数据
-            pdfRepository.toggleFavorite(pdf.path, !pdf.isFavorite)
+            pdfActions.markAsRead(pdf)
         }
     }
 
-    fun markAsRead(pdf: PdfFile) {
+    fun toggleFavorite(pdf: PdfFile) {
         viewModelScope.launch {
-            // 1. 持久化到数据库
-            pdfRepository.markAsRead(pdf.path)
+            pdfActions.toggleFavorite(pdf)
         }
     }
 
