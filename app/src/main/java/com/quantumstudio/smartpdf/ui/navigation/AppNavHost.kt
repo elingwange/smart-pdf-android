@@ -2,8 +2,10 @@ package com.quantumstudio.smartpdf.ui.navigation
 
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -30,6 +32,7 @@ fun AppNavHost(
         composable("main") {
             MainScreen(
                 viewModel = mainViewModel,
+                navController,
                 onNavigateToReader = { uri ->
                     val encodedUri = Uri.encode(uri.toString())
                     navController.navigate("reader/$encodedUri")
@@ -45,7 +48,15 @@ fun AppNavHost(
             val uriString = backStackEntry.arguments?.getString("pdfUri")
             val uri = Uri.parse(Uri.decode(uriString))
 
+            Log.d("--ELog", "Navigated with URI: $uri")
+
+            // ✨ 关键点：当进入这个 Composable 时，立即触发加载逻辑
+            LaunchedEffect(uri) {
+                readerViewModel.loadPdf(uriString ?: "")
+            }
+
             PdfReaderScreen(
+                uriString = uriString,
                 uri = uri,
                 viewModel = readerViewModel,
                 onBack = { navController.popBackStack() }

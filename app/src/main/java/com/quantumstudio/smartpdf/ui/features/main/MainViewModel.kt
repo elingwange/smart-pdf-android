@@ -1,7 +1,7 @@
 package com.quantumstudio.smartpdf.ui.features.main
 
 import android.content.Context
-import android.util.Log
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -17,7 +17,6 @@ import com.quantumstudio.smartpdf.ui.common.PdfActions
 import com.quantumstudio.smartpdf.ui.common.RefreshPermissionObserver
 import com.quantumstudio.smartpdf.ui.common.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
@@ -39,40 +38,85 @@ class MainViewModel @Inject constructor(
     private val pdfRepository: PdfRepository,
     private val pdfActions: PdfActions
 ) : ViewModel() {
+
+    private val _pendingReaderUri = MutableStateFlow<Uri?>(null)
+    val pendingReaderUri = _pendingReaderUri.asStateFlow()
+
+    fun consumePendingUri() {
+        _pendingReaderUri.value = null
+    }
+
     var hasFileAccess by mutableStateOf(false)
         private set
 
-    private var isScanning = false // 简单的状态锁
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    //=============== sort ===============
+    private val _sortField = MutableStateFlow(SortField.DATE)
+    val sortField = _sortField.asStateFlow()
+    private val _sortOrder = MutableStateFlow(SortOrder.DESCENDING)
+    val sortOrder = _sortOrder.asStateFlow()
+
+    //-----------------------------------------------------------
+
+    // 维度 4：生命周期。所有的异步逻辑都绑定在 viewModelScope
+    private val _isScanning = MutableStateFlow(false)
 
     fun scanPdfs(context: Context) {
-        // 1. 权限检查 + 状态检查
-        if (!hasFileAccess || isScanning) return
+        if (!hasFileAccess || _isScanning.value) return
 
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
-                isScanning = true
-                Log.d("SmartPDF", "开始全盘扫描...")
-                // 2. 调用 Repository 执行真正的 IO 操作（写数据库）
-                // 只要 getAllPdfs 内部执行了 roomDao.insert()，UI 就会自动刷新
-                pdfRepository.getAllPdfs(context)
-                Log.d("SmartPDF", "扫描完成，数据库已更新")
+                _isScanning.value = true
+                // 调用封装好的同步逻辑
+                pdfRepository.syncPdfFiles(context)
             } catch (e: Exception) {
-                Log.e("SmartPDF", "扫描出错", e)
             } finally {
-                isScanning = false
+                _isScanning.value = false
             }
         }
     }
 
-    // 优化 1：数据源唯一化。直接从数据库拿流，只要库里变，这里秒变。
+    // 优化后的排序逻辑：增加 debounce 机制
+    @OptIn(FlowPreview::class)
+    val sortedPdfFiles = combine(
+        pdfRepository.getAllPdfsFlow(), // 直接观察数据库流
+        _sortField,
+        _sortOrder,
+        _searchQuery.debounce(300) // 搜索防抖，避免 TCL 603 高频重组 UI
+    ) { files, field, order, query ->
+        // 1. 先过滤
+        val filtered = if (query.isBlank()) files
+        else files.filter { it.name.contains(query, ignoreCase = true) }
+
+        // 2. 再排序
+        when (field) {
+            SortField.DATE -> if (order == SortOrder.ASCENDING) filtered.sortedBy { it.lastModified } else filtered.sortedByDescending { it.lastModified }
+            SortField.NAME -> if (order == SortOrder.ASCENDING) filtered.sortedBy { it.name.lowercase() } else filtered.sortedByDescending { it.name.lowercase() }
+            SortField.SIZE -> if (order == SortOrder.ASCENDING) filtered.sortedBy { it.size } else filtered.sortedByDescending { it.size }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val allPdfsFlow = snapshotFlow { hasFileAccess }
-        .distinctUntilChanged() // ✨ 只在权限真正发生切换时才重连数据库
+        .distinctUntilChanged()
         .flatMapLatest { granted ->
             if (granted) pdfRepository.getAllPdfsFlow()
             else flowOf(emptyList())
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    @OptIn(FlowPreview::class)
+    val searchResult = _searchQuery
+        .debounce(300)
+        .combine(allPdfsFlow) { query, allFiles ->
+            if (query.isBlank()) {
+                emptyList()
+            } else {
+                allFiles.filter { it.name.contains(query, ignoreCase = true) }
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun createPermissionObserver(checkPermission: () -> Boolean): DefaultLifecycleObserver {
         return RefreshPermissionObserver(
@@ -83,31 +127,8 @@ class MainViewModel @Inject constructor(
         )
     }
 
-    // 搜索词状态
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery = _searchQuery.asStateFlow()
-
-    // 核心：通过 combine 实时计算搜索结果
-    @OptIn(FlowPreview::class)
-    val searchResult = _searchQuery
-        .debounce(300) // 防抖，防止输入太快卡顿
-        .combine(allPdfsFlow) { query, allFiles ->
-            if (query.isBlank()) {
-                emptyList() // 没输入时不显示结果
-            } else {
-                allFiles.filter { it.name.contains(query, ignoreCase = true) }
-            }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     fun onQueryChange(newQuery: String) {
         _searchQuery.value = newQuery
-    }
-    //=============== searching ===============
-
-    fun markAsRead(pdf: PdfFile) {
-        viewModelScope.launch {
-            pdfActions.markAsRead(pdf)
-        }
     }
 
     fun toggleFavorite(pdf: PdfFile) {
@@ -116,20 +137,15 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    // 1. 私有通道：负责发送
     private val _uiEvent = Channel<UiEvent>()
-    val uiEvent = _uiEvent.receiveAsFlow() // 暴露为 Flow 供 UI 监听
+    val uiEvent = _uiEvent.receiveAsFlow()
 
-    // 修改删除方法：去掉 context 参数
     fun deleteFile(pdf: PdfFile) {
         viewModelScope.launch {
             _uiEvent.send(
                 UiEvent.ShowSnackBar(
                     message = "已删除 ${pdf.name}",
-                    //                   actionLabel = "撤销",
                     onAction = {
-                        // 用户点了撤销，我们什么都不做（或者从临时回收站恢复）
-                        // 在你的简单逻辑里，如果不调 Repository 的物理删除，它就还在
                     }
                 )
             )
@@ -137,7 +153,6 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    // 重命名也可以同步修改（可选）
     fun renameFile(pdf: PdfFile, newName: String) {
         viewModelScope.launch {
             val updated = pdfRepository.renamePdfFile(pdf, newName)
@@ -146,23 +161,6 @@ class MainViewModel @Inject constructor(
             }
         }
     }
-
-    //=============== sort ===============
-    // 排序状态
-    private val _sortField = MutableStateFlow(SortField.DATE)
-    val sortField = _sortField.asStateFlow()
-
-    private val _sortOrder = MutableStateFlow(SortOrder.DESCENDING)
-    val sortOrder = _sortOrder.asStateFlow()
-
-    // 结合原始文件列表和排序状态
-    val sortedPdfFiles = combine(allPdfsFlow, _sortField, _sortOrder) { files, field, order ->
-        when (field) {
-            SortField.DATE -> if (order == SortOrder.ASCENDING) files.sortedBy { it.lastModified } else files.sortedByDescending { it.lastModified }
-            SortField.NAME -> if (order == SortOrder.ASCENDING) files.sortedBy { it.name.lowercase() } else files.sortedByDescending { it.name.lowercase() }
-            SortField.SIZE -> if (order == SortOrder.ASCENDING) files.sortedBy { it.size } else files.sortedByDescending { it.size }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun updateSortConfig(field: SortField, order: SortOrder) {
         _sortField.value = field

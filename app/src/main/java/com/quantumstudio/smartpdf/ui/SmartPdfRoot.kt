@@ -11,24 +11,24 @@ import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
+import com.quantumstudio.smartpdf.ui.features.reader.ReaderViewModel
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsViewModel
 import com.quantumstudio.smartpdf.ui.theme.SmartPDFTheme
 
 @Composable
 fun SmartPDFRoot(
     settingsViewModel: SettingsViewModel,
+    mainViewModel: MainViewModel,
+    readerViewModel: ReaderViewModel,
     navController: NavHostController = rememberNavController(),
-    // 改用 Lambda 传出 controller，让 Activity 接收
     onCreated: (NavHostController) -> Unit,
-    // content 接收一个 controller 参数
     content: @Composable (NavHostController) -> Unit
 ) {
-    val currentLanguage by settingsViewModel.currentLanguage.collectAsState()
 
+    val currentLanguage by settingsViewModel.currentLanguage.collectAsState()
     LaunchedEffect(currentLanguage) {
 
-        println("DEBUG: Language changed to $currentLanguage")
-        
         // 确保每次语言状态改变时，通知系统应用 Locale
         val appLocale = if (currentLanguage == "system") {
             LocaleListCompat.getEmptyLocaleList()

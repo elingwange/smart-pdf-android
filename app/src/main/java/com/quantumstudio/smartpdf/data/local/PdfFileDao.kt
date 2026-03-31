@@ -12,7 +12,7 @@ interface PdfFileDao {
     // ✨ 必须添加：根据路径查询单个 PDF
     @Query("SELECT * FROM pdf_files WHERE path = :path LIMIT 1")
     suspend fun getPdfByPath(path: String): PdfFile?
-    
+
     // 修改：由 REPLACE 改为 IGNORE
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(pdfs: List<PdfFile>)
@@ -42,5 +42,13 @@ interface PdfFileDao {
     @Query("UPDATE pdf_files SET currentPage = :page, lastReadTime = :timestamp WHERE path = :path")
     suspend fun updatePageProgress(path: String, page: Int, timestamp: Long)
 
+    @Query("UPDATE pdf_files SET pages = :count WHERE path = :path AND pages = 0")
+    suspend fun updatePageCount(path: String, count: Int)
 
+    /**
+     * 获取所有需要补全页数的文件
+     * 限制返回数量（比如一次只取 100 个），防止内存溢出 (OOM)
+     */
+    @Query("SELECT * FROM pdf_files WHERE pages <= 0 LIMIT 100")
+    suspend fun getFilesWithNoPages(): List<PdfFile>
 }

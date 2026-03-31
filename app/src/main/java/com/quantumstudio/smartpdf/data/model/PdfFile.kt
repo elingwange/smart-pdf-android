@@ -9,8 +9,8 @@ data class PdfFile(
     @PrimaryKey
     val path: String,        // 使用绝对路径作为主键，不再使用 UUID
     val name: String,
-    val size: Long,
-    val pages: Int,
+    val size: Long = 0,
+    val pages: Int = 0,
     val lastModified: Long,
     val uploadTime: Long = System.currentTimeMillis(),
     val category: String? = null,

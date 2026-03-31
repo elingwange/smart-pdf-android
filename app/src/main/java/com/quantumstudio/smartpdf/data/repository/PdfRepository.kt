@@ -3,6 +3,7 @@ package com.quantumstudio.smartpdf.data.repository
 import android.content.Context
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import com.quantumstudio.smartpdf.data.local.PdfFileDao
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.data.scanner.PdfScanner
@@ -10,25 +11,50 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.lang.Thread.yield
 
 class PdfRepository(
     private val pdfFileDao: PdfFileDao
 ) {
 
-    suspend fun getAllPdfs(context: Context): List<PdfFile> = withContext(Dispatchers.IO) {
-        // 1. 扫描物理文件 (这些对象的 isFavorite 默认为 false)
-        val scannedFiles = PdfScanner.scanAllPdfFiles(context)
+    // 维度 6：数据一致性。UI 只观察这个 Flow，不关心数据是怎么来的。
+    fun getAllPdfsFlow(): Flow<List<PdfFile>> = pdfFileDao.getAllPdfsFlow()
 
-        // 2. 插入数据库
-        // 因为用了 IGNORE，如果数据库里已有 A.pdf 且 isFavorite=true，这一步会跳过 A.pdf
-        if (scannedFiles.isNotEmpty()) {
-            pdfFileDao.insertAll(scannedFiles)
+    /**
+     * 核心同步逻辑：不再返回结果，只负责“生产”数据入库
+     */
+    suspend fun syncPdfFiles(context: Context) = withContext(Dispatchers.IO) {
+        // 1. 调用我们之前写的“混合扫描器”，获取 Flow
+        // 这样扫描到一个，数据库存一个，UI 就能出来一个
+        PdfScanner.getPdfsFlow(context).collect { batch ->
+            if (batch.isNotEmpty()) {
+                Log.d("---ELog", "Insert ${batch.size} pdf files")
+                pdfFileDao.insertAll(batch)
+            }
         }
-
-        // 3. 关键：必须重新从数据库读取
-        // 这样拿到的列表才是包含“已保留的收藏状态”的最终列表
-        pdfFileDao.getAllPdfs()
+        // 2. 扫描物理文件完成后，再处理页数补全
+        // 注意：这里不再开启新的独立 CoroutineScope，而是直接在当前作用域顺序执行
+        //       complementMissingPageCounts()
     }
+
+    private suspend fun complementMissingPageCounts() {
+        val missingPdfs = pdfFileDao.getFilesWithNoPages() // 建议 Dao 增加专门查 0 页的接口
+
+        // 维度 7：性能边界。为了防止 TCL 603 瞬间打开几十个 PDF 导致 OOM
+        // 我们顺序处理，或者限制并发数为 2
+        missingPdfs.forEach { pdf ->
+            val file = File(pdf.path)
+            if (file.exists()) {
+                val realCount = getPdfPageCount(file)
+                if (realCount > 0) {
+                    pdfFileDao.updatePageCount(pdf.path, realCount)
+                }
+            }
+            // 每处理一个 PDF 释放一次 CPU，防止长时间霸占 IO 导致 UI 卡顿
+            yield()
+        }
+    }
+
 
     // 切换收藏状态
     suspend fun toggleFavorite(path: String, isFavorite: Boolean) = withContext(Dispatchers.IO) {
@@ -39,8 +65,6 @@ class PdfRepository(
     suspend fun markAsRead(path: String) = withContext(Dispatchers.IO) {
         pdfFileDao.updateLastReadTime(path, System.currentTimeMillis())
     }
-
-    // 可以在这里增加：删除、搜索、标记收藏等方法
 
     suspend fun deletePdfFile(pdf: PdfFile): Boolean = withContext(Dispatchers.IO) {
         try {
@@ -77,14 +101,6 @@ class PdfRepository(
                 null
             }
         }
-
-    /**
-     * 获取所有 PDF 文件的流
-     * 这里的 Flow 会在数据库内容变化时自动发射新列表
-     */
-    fun getAllPdfsFlow(): Flow<List<PdfFile>> {
-        return pdfFileDao.getAllPdfsFlow()
-    }
 
     // ✨ 新增：更新阅读进度（页码 + 时间戳）
     suspend fun updateProgress(path: String, page: Int) {
@@ -133,4 +149,5 @@ class PdfRepository(
             0 // 如果读取失败，默认返回 0
         }
     }
+
 }

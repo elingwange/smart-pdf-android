@@ -90,7 +90,7 @@ fun ReaderBottomPanel(
 
                     BottomActionIcon(if (uiState.isNightMode) Icons.Default.LightMode else Icons.Default.DarkMode) {
                         uiState.toggleNightMode()
-                        pdfState.lastLoadedUri = null
+                        //pdfState.lastLoadedUri = null
                     }
 
                     BottomActionIcon(

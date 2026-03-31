@@ -1,6 +1,5 @@
 package com.quantumstudio.smartpdf.ui.features.reader
 
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -11,13 +10,23 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.github.barteksc.pdfviewer.PDFView
+import java.io.File
 
 enum class ReaderPanel { None, Brightness, Jump }
+
+sealed class PdfLoadStatus {
+    object Idle : PdfLoadStatus()
+    object Loading : PdfLoadStatus()
+    data class Success(val file: File) : PdfLoadStatus()
+    data class Error(val message: String) : PdfLoadStatus()
+}
 
 class ReaderUiState(
     initialIsNightMode: Boolean = false,
     initialIsUiVisible: Boolean = true
 ) {
+    var pdfLoadStatus by mutableStateOf<PdfLoadStatus>(PdfLoadStatus.Idle)
+
     var isUiVisible by mutableStateOf(initialIsUiVisible)
         private set
 
@@ -123,16 +132,16 @@ class ReaderUiState(
     }
 }
 
-// --- PDF 运行大管家 ---
 class PdfViewState {
     var currentPage by mutableIntStateOf(0)
     var totalPages by mutableIntStateOf(0)
     var scrollProgress by mutableFloatStateOf(0f)
     var isFirstLoad by mutableStateOf(true)
-    var lastLoadedUri by mutableStateOf<Uri?>(null)
-    var scrollSignal by mutableLongStateOf(System.currentTimeMillis())
 
-    // 引用 PDFView 实例用于跳转等操作
+    // ✨ 关键修复：改用 Path 字符串，绕过 Uri 序列化复杂的坑
+    var lastLoadedFilePath by mutableStateOf<String?>(null)
+
+    var scrollSignal by mutableLongStateOf(System.currentTimeMillis())
     var pdfView by mutableStateOf<PDFView?>(null)
 
     fun updatePage(page: Int, count: Int) {
@@ -141,10 +150,26 @@ class PdfViewState {
     }
 
     fun updateScroll(page: Int, offset: Float) {
+        // 防止除以 0 导致的 NaN
         if (totalPages > 1) {
             scrollProgress = (page + offset) / (totalPages - 1).toFloat()
+        } else {
+            scrollProgress = 0f
         }
         scrollSignal = System.currentTimeMillis()
+    }
+
+    companion object {
+        val Saver: Saver<PdfViewState, *> = Saver(
+            save = { listOf(it.currentPage, it.lastLoadedFilePath) },
+            restore = { saved ->
+                val list = saved as List<*>
+                PdfViewState().apply {
+                    currentPage = list[0] as Int
+                    lastLoadedFilePath = list[1] as? String
+                }
+            }
+        )
     }
 }
 
