@@ -10,17 +10,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.quantumstudio.smartpdf.R
 import com.quantumstudio.smartpdf.data.model.PdfFile
-import com.quantumstudio.smartpdf.ui.theme.PdfRed
+import com.quantumstudio.smartpdf.util.CommonUtils
+import com.quantumstudio.smartpdf.util.FileUtils
 
 @Composable
 fun SearchItem(
@@ -35,18 +37,16 @@ fun SearchItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 1. 左侧图标 (类似截图中的 PDF 红标)
         Box(
             modifier = Modifier.size(40.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.PictureAsPdf, // 或者是你自定义的 PDF 图标
-                contentDescription = null,
-                tint = PdfRed,
-                modifier = Modifier.size(32.dp)
+                painter = painterResource(id = R.drawable.ic_pdf),
+                contentDescription = "PDF Icon",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(40.dp)
             )
-            // 如果你想更接近截图，可以叠加一个小小的 "PDF" 文字标签
         }
 
         Spacer(modifier = Modifier.width(16.dp))
@@ -63,7 +63,11 @@ fun SearchItem(
 
             // 副标题：日期与大小 (对应截图：Feb 14, 2026 · 16.2 MB)
             Text(
-                text = "${pdf.lastModified}  •  ${pdf.size}",
+                text = "${CommonUtils.formatDate(pdf.lastModified)}  •  ${
+                    FileUtils.formatFileSize(
+                        pdf.size
+                    )
+                }",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

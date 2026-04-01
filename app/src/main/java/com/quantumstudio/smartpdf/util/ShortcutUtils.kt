@@ -23,13 +23,13 @@ object ShortcutUtils {
         val shortcutManager = context.getSystemService(ShortcutManager::class.java) ?: return
 
         if (shortcutManager.isRequestPinShortcutSupported) {
-            // 1. 构建 Intent
+
             val intent = Intent(context, MainActivity::class.java).apply {
                 action = Intent.ACTION_VIEW
-                // ✨ 修正 4：确保路径转为 Uri，且处理可能的特殊字符
-                data =
-                    Uri.parse(if (pdf.path.startsWith("content://")) pdf.path else "file://${pdf.path}")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                // 统一封装，确保传给 MainActivity 的是标准的 file:// 协议
+                data = Uri.fromFile(java.io.File(pdf.path))
+                // 关键：如果不加这个 flag，可能无法在 App 已启动的情况下切换文档
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
 
             // 2. 创建快捷方式信息
@@ -39,7 +39,7 @@ object ShortcutUtils {
                 .setIcon(
                     Icon.createWithResource(
                         context,
-                        R.drawable.ic_pdf // 确保这个资源存在且是 Vector 或 PNG
+                        R.drawable.ic_pdf_256 // 确保这个资源存在且是 Vector 或 PNG
                     )
                 )
                 .setIntent(intent)

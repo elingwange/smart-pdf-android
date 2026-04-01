@@ -18,17 +18,13 @@ import com.quantumstudio.smartpdf.ui.theme.SmartPDFTheme
 fun SmartPDFRoot(
     settingsViewModel: SettingsViewModel,
     navController: NavHostController = rememberNavController(),
-    // 改用 Lambda 传出 controller，让 Activity 接收
     onCreated: (NavHostController) -> Unit,
-    // content 接收一个 controller 参数
     content: @Composable (NavHostController) -> Unit
 ) {
-    val currentLanguage by settingsViewModel.currentLanguage.collectAsState()
 
+    val currentLanguage by settingsViewModel.currentLanguage.collectAsState()
     LaunchedEffect(currentLanguage) {
 
-        println("DEBUG: Language changed to $currentLanguage")
-        
         // 确保每次语言状态改变时，通知系统应用 Locale
         val appLocale = if (currentLanguage == "system") {
             LocaleListCompat.getEmptyLocaleList()

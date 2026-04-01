@@ -1,5 +1,6 @@
 package com.quantumstudio.smartpdf.ui.features.main.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,7 +58,13 @@ fun PdfListItem(
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            // ✨ 建议：深色模式下稍微拉开一点色差
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        // ✨ 核心修补：增加描边。浅色模式透明，深色模式显示淡淡的灰色/主色描边
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {

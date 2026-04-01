@@ -1,5 +1,9 @@
 package com.quantumstudio.smartpdf.ui.features.settings
 
+import android.net.Uri
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -46,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import com.quantumstudio.smartpdf.R
 import com.quantumstudio.smartpdf.ui.features.settings.components.DefaultAppGuideDialog
 import com.quantumstudio.smartpdf.ui.features.settings.components.LanguageSelectionDialog
@@ -54,7 +59,6 @@ import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.openAppInfoSettings
 import com.quantumstudio.smartpdf.util.CommonUtils.openPlayStore
 import com.quantumstudio.smartpdf.util.CommonUtils.openPrivacyPolicy
-import com.quantumstudio.smartpdf.util.CommonUtils.openSystemFileManager
 import com.quantumstudio.smartpdf.util.CommonUtils.sendFeedbackEmail
 
 
@@ -64,12 +68,28 @@ enum class SettingsDialog {
 }
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    navController: NavController,
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
 
     val context = LocalContext.current
     val appVersion = remember { CommonUtils.getAppVersionName(context) }
     val currentTheme by viewModel.themeMode.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState(initial = "system")
+
+    // ✨ 1. 在这里定义“接球手” (Launcher)
+    // 它负责打开系统界面，并监听返回结果
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { it ->
+            Log.d("---ELog", "设置页面拿到文件: $it")
+            val encodedUri = Uri.encode(it.toString())
+            navController.navigate("reader/$encodedUri")
+        }
+    }
+
 
     var activeDialog by rememberSaveable { mutableStateOf<SettingsDialog?>(null) }
     // 统一分发逻辑
@@ -105,7 +125,11 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             SettingRow(
                 Icons.Outlined.Folder,
                 stringResource(R.string.file_manager)
-            ) { openSystemFileManager(context) }
+            ) {
+                //openSystemFileManager(context)
+                Log.d("---ELog", "从设置页面启动文件选择器")
+                filePickerLauncher.launch("application/pdf")
+            }
             SettingDivider()
             SettingRow(Icons.Outlined.Palette, stringResource(R.string.theme_mode)) {
                 activeDialog = SettingsDialog.THEME
@@ -143,7 +167,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             ) {}
         }
     }
-    
+
 }
 
 @Composable

@@ -76,25 +76,6 @@ object CommonUtils {
         }
     }
 
-    fun openSystemFileManager(context: android.content.Context) {
-        try {
-            // 使用 ACTION_GET_CONTENT 可以唤起系统的文件选择器
-            val intent = android.content.Intent(android.content.Intent.ACTION_GET_CONTENT).apply {
-                type = "*/*" // 查看所有文件
-                addCategory(android.content.Intent.CATEGORY_OPENABLE)
-                // 尝试让某些文件管理器显示更详细的路径（取决于厂商实现）
-                putExtra("android.content.extra.SHOW_ADVANCED", true)
-            }
-            context.startActivity(android.content.Intent.createChooser(intent, "Open File Manager"))
-        } catch (e: Exception) {
-            android.widget.Toast.makeText(
-                context,
-                "No File Manager found",
-                android.widget.Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
     fun openAppInfoSettings(context: Context) {
         val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
             // 直接定位到 Smart PDF 的系统详情页
@@ -186,12 +167,12 @@ object CommonUtils {
 
     fun sendFeedbackEmail(context: Context) {
         val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+            val appVersion = getAppVersionName(context) // 复用已有的安全函数
             // mailto: 协议确保只匹配邮件客户端
             data = Uri.parse("mailto:")
             putExtra(Intent.EXTRA_EMAIL, arrayOf("support@yourdomain.com")) // 收件人
-            putExtra(Intent.EXTRA_SUBJECT, "Feedback for Smart PDF App")       // 主件
+            putExtra(Intent.EXTRA_SUBJECT, "Feedback for Smart PDF v${appVersion}")       // 主件
             // 在 sendFeedbackEmail 内部
-            val appVersion = getAppVersionName(context) // 复用已有的安全函数
             val debugInfo =
                 "\n\n--- Debug Info ---\nApp Version: $appVersion\nDevice: ${Build.MODEL}"
             putExtra(
