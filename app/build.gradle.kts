@@ -14,8 +14,8 @@ android {
         applicationId = "com.quantumstudio.smartpdf"
         minSdk = 23
         targetSdk = 35
-        versionCode = 600
-        versionName = "0.6.0"
+        versionCode = 10000
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
