@@ -23,7 +23,7 @@ object ShortcutUtils {
         val shortcutManager = context.getSystemService(ShortcutManager::class.java) ?: return
 
         if (shortcutManager.isRequestPinShortcutSupported) {
-           
+
             val intent = Intent(context, MainActivity::class.java).apply {
                 action = Intent.ACTION_VIEW
                 // 统一封装，确保传给 MainActivity 的是标准的 file:// 协议
@@ -39,7 +39,7 @@ object ShortcutUtils {
                 .setIcon(
                     Icon.createWithResource(
                         context,
-                        R.drawable.ic_pdf // 确保这个资源存在且是 Vector 或 PNG
+                        R.drawable.ic_pdf_256 // 确保这个资源存在且是 Vector 或 PNG
                     )
                 )
                 .setIntent(intent)

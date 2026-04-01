@@ -1,7 +1,10 @@
 package com.quantumstudio.smartpdf.ui.features.main
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -38,6 +41,18 @@ fun MainScreen(
     navController: NavController,
     onNavigateToReader: (Uri) -> Unit
 ) {
+    // 1. 定义接收器
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { it ->
+            Log.d("---ELog", "设置页面拿到文件: $it")
+            val encodedUri = Uri.encode(it.toString())
+            navController.navigate("reader/$encodedUri")
+        }
+    }
+
+
     val pendingUri by viewModel.pendingReaderUri.collectAsStateWithLifecycle()
     LaunchedEffect(pendingUri) {
         val uri = pendingUri ?: return@LaunchedEffect
@@ -134,7 +149,12 @@ fun MainScreen(
                 if (viewModel.hasFileAccess) MainTopBar(
                     currentPage = pagerState.currentPage,
                     onSearchClick = { isSearching = true },
-                    onSortClick = { showSortDialog = true }
+                    onSortClick = { showSortDialog = true },
+                    // ✅ 2. 这里的“接线”是关键！
+                    onOpenFileClick = {
+                        Log.d("---ELog", "TopBar 点击了打开文件")
+                        filePickerLauncher.launch("application/pdf")
+                    }
                 )
             },
             bottomBar = {
@@ -152,6 +172,7 @@ fun MainScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = viewModel,
                 pagerState = pagerState,
+                navController = navController,
                 onNavigateToReader = onNavigateToReader
             )
         }

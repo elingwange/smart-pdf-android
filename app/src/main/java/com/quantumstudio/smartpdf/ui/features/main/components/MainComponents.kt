@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.quantumstudio.smartpdf.R
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsScreen
@@ -42,6 +43,7 @@ fun MainPager(
     modifier: Modifier,
     viewModel: MainViewModel,
     pagerState: PagerState,
+    navController: NavController,
     onNavigateToReader: (Uri) -> Unit
 ) {
     val context = LocalContext.current
@@ -54,7 +56,7 @@ fun MainPager(
                     0 -> AllFilesTab(viewModel, onNavigateToReader)
                     1 -> FavoriteFilesTab(viewModel, onNavigateToReader)
                     2 -> RecentFilesTab(viewModel, onNavigateToReader)
-                    3 -> SettingsScreen()
+                    3 -> SettingsScreen(navController)
                 }
             }
         }

@@ -76,25 +76,6 @@ object CommonUtils {
         }
     }
 
-    fun openSystemFileManager(context: android.content.Context) {
-        try {
-            // 使用 ACTION_GET_CONTENT 可以唤起系统的文件选择器
-            val intent = android.content.Intent(android.content.Intent.ACTION_GET_CONTENT).apply {
-                type = "*/*" // 查看所有文件
-                addCategory(android.content.Intent.CATEGORY_OPENABLE)
-                // 尝试让某些文件管理器显示更详细的路径（取决于厂商实现）
-                putExtra("android.content.extra.SHOW_ADVANCED", true)
-            }
-            context.startActivity(android.content.Intent.createChooser(intent, "Open File Manager"))
-        } catch (e: Exception) {
-            android.widget.Toast.makeText(
-                context,
-                "No File Manager found",
-                android.widget.Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
     fun openAppInfoSettings(context: Context) {
         val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
             // 直接定位到 Smart PDF 的系统详情页

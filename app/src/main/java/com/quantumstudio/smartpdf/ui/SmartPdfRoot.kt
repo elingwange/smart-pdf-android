@@ -11,16 +11,12 @@ import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
-import com.quantumstudio.smartpdf.ui.features.reader.ReaderViewModel
 import com.quantumstudio.smartpdf.ui.features.settings.SettingsViewModel
 import com.quantumstudio.smartpdf.ui.theme.SmartPDFTheme
 
 @Composable
 fun SmartPDFRoot(
     settingsViewModel: SettingsViewModel,
-    mainViewModel: MainViewModel,
-    readerViewModel: ReaderViewModel,
     navController: NavHostController = rememberNavController(),
     onCreated: (NavHostController) -> Unit,
     content: @Composable (NavHostController) -> Unit

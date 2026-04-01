@@ -28,6 +28,7 @@ import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
 import com.quantumstudio.smartpdf.util.ShortcutUtils
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.yield
 import kotlin.math.roundToInt
 
 
@@ -82,8 +83,8 @@ fun PdfReaderScreen(
     LaunchedEffect(pdfState.scrollSignal) {
         if (pdfState.totalPages > 0) {
             uiState.isPageIndicatorVisible = true
-            // 2秒后自动消失
-            delay(2000)
+            delay(200)
+            yield()
             uiState.isPageIndicatorVisible = false
         }
     }
@@ -153,7 +154,7 @@ private fun PdfContentLayer(
     // 自动保存进度逻辑保持不变
     LaunchedEffect(pdfState.currentPage) {
         if (!pdfState.isFirstLoad) {
-            delay(1000)
+            delay(100)
             viewModel.updateProgress(file.absolutePath, pdfState.currentPage)
         }
     }

@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import com.quantumstudio.smartpdf.ui.theme.PdfRed
-import com.quantumstudio.smartpdf.util.CommonUtils.openSystemFileManager
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,7 +27,8 @@ import com.quantumstudio.smartpdf.util.CommonUtils.openSystemFileManager
 fun MainTopBar(
     currentPage: Int,
     onSearchClick: () -> Unit,
-    onSortClick: () -> Unit
+    onSortClick: () -> Unit,
+    onOpenFileClick: () -> Unit
 ) {
     if (currentPage == 3) {
         TopAppBar(
@@ -45,13 +45,18 @@ fun MainTopBar(
         )
     } else {
         // 0, 1, 2 都是主文件相关的页面，显示带有 Logo 和操作按钮的 HomeTopBar
-        HomeTopBar(currentPage, onSearchClick, onSortClick)
+        HomeTopBar(currentPage, onSearchClick, onSortClick, onOpenFileClick)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeTopBar(currentPage: Int, onSearchClick: () -> Unit, onSortClick: () -> Unit) {
+fun HomeTopBar(
+    currentPage: Int,
+    onSearchClick: () -> Unit,
+    onSortClick: () -> Unit,
+    onOpenFileClick: () -> Unit
+) {
     val context = LocalContext.current
 
     Column(modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)) {
@@ -72,7 +77,7 @@ fun HomeTopBar(currentPage: Int, onSearchClick: () -> Unit, onSortClick: () -> U
             },
             actions = {
                 // 这里可以根据 currentPage 做微调，比如在“最近”页面不显示排序
-                IconButton(onClick = { openSystemFileManager(context) }) {
+                IconButton(onClick = { onOpenFileClick() }) {
                     Icon(Icons.Default.FolderOpen, null, tint = MaterialTheme.colorScheme.onSurface)
                 }
                 IconButton(onClick = onSortClick) {

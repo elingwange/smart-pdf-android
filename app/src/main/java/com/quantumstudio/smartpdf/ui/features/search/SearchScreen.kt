@@ -1,8 +1,10 @@
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -12,11 +14,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.unit.dp
 import com.quantumstudio.smartpdf.data.model.PdfFile
-import com.quantumstudio.smartpdf.ui.features.search.components.SearchItem
-import com.quantumstudio.smartpdf.ui.features.search.components.SearchTopBar
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
 import com.quantumstudio.smartpdf.ui.features.search.SearchEmptyState
+import com.quantumstudio.smartpdf.ui.features.search.components.SearchItem
+import com.quantumstudio.smartpdf.ui.features.search.components.SearchTopBar
 
 
 @Composable
@@ -74,15 +77,25 @@ fun SearchScreen(
                     // 情况 C: 搜索到结果 -> 显示列表
                     else -> {
                         LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            items(
+                            itemsIndexed(
                                 items = results,
-                                key = { it.path } // 使用路径作为唯一 Key 提升性能
-                            ) { pdf ->
+                                key = { _, it -> it.path } // itemsIndexed 的 key lambda 第一个参数是 index
+                            ) { index, pdf ->
+                                // 1. 渲染搜索项
                                 SearchItem(
                                     pdf = pdf,
                                     query = query,
                                     onClick = { onFileClick(pdf) }
                                 )
+
+                                // 2. 添加分割线逻辑：如果不是最后一条，就画一条线
+                                if (index < results.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 16.dp), // 左右留白，与列表内容对齐
+                                        thickness = 0.5.dp,
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                    )
+                                }
                             }
                         }
                     }

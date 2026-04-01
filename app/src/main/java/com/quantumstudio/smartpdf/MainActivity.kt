@@ -6,7 +6,6 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -47,7 +46,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
 
         initObservers()
 
@@ -56,8 +55,6 @@ class MainActivity : AppCompatActivity() {
         setContent {
             SmartPDFRoot(
                 settingsViewModel = settingsViewModel,
-                mainViewModel = mainViewModel,
-                readerViewModel = readerViewModel,
                 onCreated = {
                     navController = it
                     // ✨ 关键：只有当 NavController 准备好后，才处理 Intent
