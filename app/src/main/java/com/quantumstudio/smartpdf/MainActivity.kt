@@ -81,21 +81,47 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleIntent(intent: Intent?) {
         val uri = intent?.data ?: return
+        Log.d("---ELog", "Handling Intent URI: $uri, Scheme: ${uri.scheme}")
 
-        // 关键点：这是 Activity 还在前台，权限最稳的时候
-        if (uri.scheme == "content") {
-            // 直接在 Activity 层面启动一个简单的拷贝任务
-            // 或者调用 ViewModel 的方法，但必须确保传入的是当前 Activity 授权的 URI
-            lifecycleScope.launch(Dispatchers.IO) {
-                val localFile = saveUriToCache(uri)
-                if (localFile != null) {
-                    withContext(Dispatchers.Main) {
-                        // 跳转时，不再传复杂的 content:// URI，直接传本地缓存路径
-                        val encodedPath = Uri.encode(localFile.absolutePath)
-                        navController?.navigate("reader/$encodedPath")
+        when (uri.scheme) {
+            "content" -> {
+                // 情况 A：外部应用（Gmail/WeChat）传入的临时权限 URI -> 执行拷贝
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val localFile = saveUriToCache(uri) // 你刚才写的拷贝逻辑
+                    if (localFile != null) {
+                        withContext(Dispatchers.Main) {
+                            Log.d(
+                                "---ELog",
+                                "content-> localFile.absolutePath: $localFile.absolutePath"
+                            )
+                            navigateToReader(localFile.absolutePath)
+                        }
                     }
                 }
             }
+
+            "file" -> {
+                // 情况 B：桌面快捷方式或本地文件浏览器传入的直接路径
+                // 注意：file://path 需要去掉协议头，或者直接拿 path
+                val path = uri.path ?: return
+                Log.d("---ELog", "file-> path: $path")
+                navigateToReader(path)
+            }
+
+            else -> {
+                // 情况 C：某些情况下直接传的是绝对路径字符串
+                Log.d("---ELog", "else—> uri.toString(): $uri.toString()")
+                navigateToReader(uri.toString())
+            }
+        }
+    }
+
+    private fun navigateToReader(path: String) {
+        // 统一编码路径并跳转
+        val encodedPath = Uri.encode(path)
+        navController?.navigate("reader/$encodedPath") {
+            // 建议：如果是从快捷方式进入，清空栈，防止按返回键回到一个空的 MainActivity
+            popUpTo(navController!!.graph.startDestinationId) { saveState = true }
         }
     }
 
@@ -108,7 +134,7 @@ class MainActivity : AppCompatActivity() {
             }
             if (tempFile.exists() && tempFile.length() > 0) tempFile else null
         } catch (e: Exception) {
-            Log.e("--ELog", "Pre-cache failed: ${e.message}")
+            Log.e("---ELog", "Pre-cache failed: ${e.message}")
             null
         }
     }

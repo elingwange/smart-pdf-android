@@ -150,12 +150,10 @@ class PdfViewState {
     }
 
     fun updateScroll(page: Int, offset: Float) {
-        // 防止除以 0 导致的 NaN
         if (totalPages > 1) {
             scrollProgress = (page + offset) / (totalPages - 1).toFloat()
-        } else {
-            scrollProgress = 0f
         }
+        // ✨ 必须更新这个，否则 LaunchedEffect 不执行
         scrollSignal = System.currentTimeMillis()
     }
 

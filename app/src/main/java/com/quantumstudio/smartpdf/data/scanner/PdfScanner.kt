@@ -15,48 +15,63 @@ import java.io.File
 import java.lang.Thread.yield
 
 object PdfScanner {
+    private const val TAG = "---ELog"
 
     /**
      * 混合扫描入口：利用 Flow 实现响应式加载
-     * 1. 立即发射 MediaStore 索引结果（求快）
-     * 2. 异步执行 BFS 物理扫描补漏（求全）
      */
     fun getPdfsFlow(context: Context): Flow<List<PdfFile>> = flow {
         val startTime = System.currentTimeMillis()
-        Log.d("---ELog", "Scan start...")
-        // 第一阶段：快速获取系统索引 (MediaStore)
-        val mediaStorePdfs = scanMediaStore(context)
-        Log.d("---ELog", "${mediaStorePdfs.size} pdf files found in MediaStore")
-        emit(mediaStorePdfs) // 毫秒级返回，UI 立即显示
+        val packageName = context.packageName
 
-        // 第二阶段：物理扫描补漏-BFS
+        // 第一阶段：快速获取系统索引 (MediaStore)
+        // 增加 File.exists() 校验，过滤掉 MediaStore 中的“僵尸”缓存路径
+        val mediaStorePdfs = scanMediaStore(context)
+        val validMediaStorePdfs = mediaStorePdfs.filter {
+            val file = File(it.path)
+            file.exists() && file.length() > 0 && !it.path.contains(packageName, ignoreCase = true)
+        }
+
+        Log.d(TAG, "MediaStore found ${validMediaStorePdfs.size} valid files")
+        val count = validMediaStorePdfs.count { it.name.contains("incoming") }
+        Log.d(TAG, "MediaStore found $count cache files")
+        validMediaStorePdfs.map { it.name }.forEach { Log.d(TAG, it) }
+
+        emit(validMediaStorePdfs)
+
+        // 第二阶段：BFS 物理扫描补漏
+        // 目标：发现 MediaStore 还没来得及索引的新文件
         val root = Environment.getExternalStorageDirectory() ?: return@flow
         val queue = ArrayDeque<File>()
         queue.add(root)
 
         val batchList = mutableListOf<PdfFile>()
-        val knownPaths = mediaStorePdfs.map { it.path }.toSet()
+        val knownPaths = validMediaStorePdfs.map { it.path }.toSet()
 
         while (queue.isNotEmpty()) {
             val currentDir = queue.removeFirst()
 
-            // 维度 4：生命周期感知。如果协程被取消（如用户退出界面），立即停止
             currentCoroutineContext().ensureActive()
-
-            // 维度 7：性能边界。让出 CPU，给 UI 刷新留出时间
             yield()
 
             val files = currentDir.listFiles() ?: continue
             for (file in files) {
                 if (file.isDirectory) {
-                    // 过滤掉敏感或无意义目录，减少无效 I/O
-                    if (!shouldSkip(file)) queue.addLast(file)
+                    // ✨ 核心修复：改进过滤逻辑，排除 data, cache 和私有包名目录
+                    if (!shouldSkip(file, packageName)) {
+                        queue.addLast(file)
+                    }
                 } else if (file.extension.equals("pdf", ignoreCase = true)) {
-                    if (!knownPaths.contains(file.absolutePath)) {
+                    val absolutePath = file.absolutePath
+                    // 只有 MediaStore 没记录的文件才通过物理扫描添加
+                    if (!knownPaths.contains(absolutePath) && !absolutePath.contains(
+                            packageName,
+                            ignoreCase = true
+                        )
+                    ) {
                         batchList.add(file.toPdfFile())
 
-                        // 每发现 10 个新文件更新一次 UI，避免频繁回调导致掉帧
-                        if (batchList.size >= 10) {
+                        if (batchList.size >= 15) {
                             emit(batchList.toList())
                             batchList.clear()
                         }
@@ -64,11 +79,10 @@ object PdfScanner {
                 }
             }
         }
+
         if (batchList.isNotEmpty()) emit(batchList)
-        val endTime = System.currentTimeMillis()
-        Log.d("---ELog", "Scan end")
-        Log.d("---ELog", "Scan time: ${endTime - startTime}ms")
-    }.flowOn(Dispatchers.IO) // 强制在 IO 线程池执行
+        Log.d(TAG, "Scan completed in ${System.currentTimeMillis() - startTime}ms")
+    }.flowOn(Dispatchers.IO)
 
     /**
      * 利用 ContentResolver 查询 MediaStore 索引
@@ -82,36 +96,59 @@ object PdfScanner {
             MediaStore.Files.FileColumns.SIZE,
             MediaStore.Files.FileColumns.DATE_MODIFIED
         )
-        // 过滤 PDF 类型
+
         val selection = "${MediaStore.Files.FileColumns.MIME_TYPE} = ?"
         val selectionArgs = arrayOf("application/pdf")
+        val sortOrder = "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC"
 
-        context.contentResolver.query(collection, projection, selection, selectionArgs, null)
-            ?.use { cursor ->
-                val nameCol =
-                    cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
-                val pathCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
-                val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
-                val dateCol =
-                    cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
+        try {
+            context.contentResolver.query(
+                collection,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            )
+                ?.use { cursor ->
+                    val nameCol =
+                        cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                    val pathCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
+                    val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
+                    val dateCol =
+                        cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
 
-                while (cursor.moveToNext()) {
-                    pdfs.add(
-                        PdfFile(
-                            name = cursor.getString(nameCol),
-                            path = cursor.getString(pathCol),
-                            size = cursor.getLong(sizeCol),
-                            lastModified = cursor.getLong(dateCol) * 1000 // 转为毫秒
+                    while (cursor.moveToNext()) {
+                        val path = cursor.getString(pathCol) ?: continue
+                        pdfs.add(
+                            PdfFile(
+                                name = cursor.getString(nameCol) ?: File(path).name,
+                                path = path,
+                                size = cursor.getLong(sizeCol),
+                                lastModified = cursor.getLong(dateCol) * 1000
+                            )
                         )
-                    )
+                    }
                 }
-            }
+        } catch (e: Exception) {
+            Log.e(TAG, "MediaStore query error", e)
+        }
         return pdfs
     }
 
-    private fun shouldSkip(dir: File): Boolean {
-        val name = dir.name
-        return name.startsWith(".") || name == "Android" || name == "Data"
+    /**
+     * ✨ 关键修复：严密的目录过滤逻辑
+     */
+    private fun shouldSkip(dir: File, packageName: String): Boolean {
+        val path = dir.absolutePath.lowercase()
+        val name = dir.name.lowercase()
+
+        return name.startsWith(".") ||
+                name == "android" ||
+                name == "data" ||
+                name == "cache" ||
+                path.contains("/$packageName/") || // 排除本 App 产生的任何目录
+                path.contains("/temp/") ||
+                path.contains("/com.") // 排除其他 App 的私有数据区
     }
 
     private fun File.toPdfFile() = PdfFile(
@@ -120,75 +157,4 @@ object PdfScanner {
         size = this.length(),
         lastModified = this.lastModified()
     )
-
-
-    /**
-     * 使用 BFS（广度优先搜索）迭代扫描所有 PDF 文件
-     * 解决了递归带来的栈溢出风险和高频栈帧创建开销
-     */
-    fun scanAllPdfFiles(context: Context): List<PdfFile> {
-        val pdfList = mutableListOf<PdfFile>()
-        val root = Environment.getExternalStorageDirectory() ?: return pdfList
-
-        // 使用队列存放待扫描的文件夹
-        val queue = ArrayDeque<File>()
-        queue.add(root)
-
-        while (queue.isNotEmpty()) {
-            // 取出当前层级的文件夹
-            val currentDir = queue.removeFirst()
-
-            // 每处理一个文件夹，主动释放一次 CPU 占用权
-            // 如果没有其他更高优先级的任务，它会立即恢复执行
-            // 如果 UI 线程在抢资源，它会礼貌地让路
-            yield()
-
-            // listFiles() 是 I/O 操作，建议在外层配合协程使用 Dispatchers.IO
-            val files = currentDir.listFiles() ?: continue
-
-            for (file in files) {
-                if (file.isDirectory) {
-                    // 发现文件夹，不递归，直接入队等待后续处理
-                    queue.addLast(file)
-                } else if (file.isFile && file.extension.equals("pdf", ignoreCase = true)) {
-                    // 发现 PDF，直接封装
-                    pdfList.add(
-                        PdfFile(
-                            name = file.name,
-                            path = file.absolutePath,
-                            size = file.length(),
-                            pages = 0,
-                            lastModified = file.lastModified()
-                        )
-                    )
-                }
-            }
-        }
-        return pdfList
-    }
-
-
-    /**
-     * 递归扫描目录
-     */
-    private fun scanDirectory(dir: File, pdfList: MutableList<PdfFile>) {
-        if (!dir.exists() || !dir.isDirectory) return
-
-        val files = dir.listFiles() ?: return
-        for (file in files) {
-            if (file.isDirectory) {
-                scanDirectory(file, pdfList)
-            } else if (file.isFile && file.extension.lowercase() == "pdf") {
-                // 封装成 PdfFile
-                val pdfFile = PdfFile(
-                    name = file.name,
-                    path = file.absolutePath,
-                    size = file.length(),
-                    pages = 0, // 后面可用 PDF 库解析页数
-                    lastModified = file.lastModified()
-                )
-                pdfList.add(pdfFile)
-            }
-        }
-    }
 }

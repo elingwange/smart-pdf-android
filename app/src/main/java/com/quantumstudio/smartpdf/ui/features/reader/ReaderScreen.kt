@@ -79,6 +79,15 @@ fun PdfReaderScreen(
         }
     }
 
+    LaunchedEffect(pdfState.scrollSignal) {
+        if (pdfState.totalPages > 0) {
+            uiState.isPageIndicatorVisible = true
+            // 2秒后自动消失
+            delay(2000)
+            uiState.isPageIndicatorVisible = false
+        }
+    }
+
     // 4. UI 渲染主逻辑
     Box(
         modifier = Modifier
@@ -141,7 +150,7 @@ private fun PdfContentLayer(
 ) {
     val context = LocalContext.current
 
-    // 自动保存进度：页码变动后防抖写入
+    // 自动保存进度逻辑保持不变
     LaunchedEffect(pdfState.currentPage) {
         if (!pdfState.isFirstLoad) {
             delay(1000)
@@ -156,49 +165,75 @@ private fun PdfContentLayer(
             factory = { ctx ->
                 PDFView(ctx, null).apply {
                     setOnClickListener { uiState.toggleUi() }
+                    // ✨ 关键修复 1：在 factory 中就建立引用，确保实例稳定
                     pdfState.pdfView = this
                 }
             },
             update = { pdfView ->
-                // 关键：对比文件路径而不是 URI，因为缓存文件名是带时间戳的
-                if (pdfState.lastLoadedFilePath != file.absolutePath) {
+                // ✨ 关键修复 2：显式读取状态，确保 update 块订阅了这些变量的变化
+                val nightMode = uiState.isNightMode
+                val currentFilePath = file.absolutePath
+
+                if (pdfState.lastLoadedFilePath != currentFilePath) {
+                    // 首次加载或文件切换
                     pdfView.fromFile(file)
-                        .nightMode(uiState.isNightMode)
-                        .defaultPage(currentPdf.currentPage) // 从数据库恢复进度
+                        .nightMode(nightMode)
+                        .defaultPage(currentPdf.currentPage)
                         .fitEachPage(true)
                         .pageFling(true)
                         .onPageChange { p, c -> pdfState.updatePage(p, c) }
+                        // ✨ 关键修复 3：补回丢失的滑动监听，否则 scrollProgress 永远是 0，指示器不走
+                        .onPageScroll { page, offset ->
+                            pdfState.updateScroll(page, offset)
+                        }
                         .onLoad {
                             pdfState.isFirstLoad = false
-                            pdfState.lastLoadedFilePath = file.absolutePath
+                            pdfState.lastLoadedFilePath = currentFilePath
                             pdfView.zoomTo(1f)
-                            viewModel.markAsRead(currentPdf)
                         }
                         .load()
                 } else {
-                    pdfView.setNightMode(uiState.isNightMode)
+                    // ✨ 关键修复 4：解决切换主题不即时生效的问题
+                    // PDFView 内部对 nightMode 的修改有时需要重新加载或强制刷新
+                    pdfView.setNightMode(nightMode)
+                    // 强制 PDFView 重绘滤镜层
+                    pdfView.invalidate()
                 }
             }
         )
 
-        // --- 悬浮 UI 组件 (仅在有页数数据时显示，防止 NaN) ---
+        // --- 悬浮 UI 组件 ---
+        // ✨ 关键修复 5：只要有页数就显示，确保滚动条逻辑正确关联
         if (pdfState.totalPages > 0) {
+
             PdfScrollbarThumb(
                 modifier = Modifier.align(Alignment.CenterEnd),
                 isVisible = uiState.isPageIndicatorVisible,
                 currentPage = pdfState.currentPage,
+                // 这里 pdfState.scrollProgress 的变化现在会由于 onPageScroll 的补回而生效
                 scrollProgress = pdfState.scrollProgress,
                 onScrollDelta = { delta ->
-                    val newProgress = (pdfState.scrollProgress + delta).coerceIn(0f, 1f)
-                    pdfState.scrollProgress = newProgress
-                    val targetPage = (newProgress * (pdfState.totalPages - 1)).roundToInt()
-                    if (targetPage != pdfState.currentPage) pdfState.pdfView?.jumpTo(targetPage)
+                    pdfState.pdfView?.let { view ->
+                        // delta 向上滑是负的，向下滑是正的
+                        val newProgress = (pdfState.scrollProgress + delta).coerceIn(0f, 1f)
+
+                        // 更新状态，驱动 UI 重组
+                        pdfState.scrollProgress = newProgress
+
+                        // 计算目标页码
+                        val targetPage = (newProgress * (pdfState.totalPages - 1)).roundToInt()
+
+                        // 只有页码真的变了才跳转，减少抖动
+                        if (targetPage != pdfState.currentPage) {
+                            view.jumpTo(targetPage)
+                        }
+                    }
                 }
             )
 
             ReaderTopBar(
                 isUiVisible = uiState.isUiVisible,
-                title = uri.lastPathSegment ?: "SmartPDF Reader",
+                title = currentPdf.name, // 使用数据库里的名字更准确
                 onBack = onBack,
                 onInfoClick = { uiState.showInfoDialog = true },
                 onAddToHomeClick = {
@@ -217,7 +252,7 @@ private fun PdfContentLayer(
                 onToggleFavorite = { viewModel.toggleFavorite(currentPdf) },
                 onRotationClick = {
                     CommonUtils.toggleScreenOrientation(activity)
-                    // 旋转后清空路径标识，强制 AndroidView 重新触发适配布局的 load()
+                    // 旋转后清空标识，强制 AndroidView 重新 load 以适配横竖屏布局
                     pdfState.lastLoadedFilePath = null
                 },
                 activity = activity

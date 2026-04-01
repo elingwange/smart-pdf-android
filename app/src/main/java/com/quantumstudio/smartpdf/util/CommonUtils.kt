@@ -186,12 +186,12 @@ object CommonUtils {
 
     fun sendFeedbackEmail(context: Context) {
         val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+            val appVersion = getAppVersionName(context) // 复用已有的安全函数
             // mailto: 协议确保只匹配邮件客户端
             data = Uri.parse("mailto:")
             putExtra(Intent.EXTRA_EMAIL, arrayOf("support@yourdomain.com")) // 收件人
-            putExtra(Intent.EXTRA_SUBJECT, "Feedback for Smart PDF App")       // 主件
+            putExtra(Intent.EXTRA_SUBJECT, "Feedback for Smart PDF v${appVersion}")       // 主件
             // 在 sendFeedbackEmail 内部
-            val appVersion = getAppVersionName(context) // 复用已有的安全函数
             val debugInfo =
                 "\n\n--- Debug Info ---\nApp Version: $appVersion\nDevice: ${Build.MODEL}"
             putExtra(

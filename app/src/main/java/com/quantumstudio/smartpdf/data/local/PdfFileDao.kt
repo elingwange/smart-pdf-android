@@ -49,6 +49,6 @@ interface PdfFileDao {
      * 获取所有需要补全页数的文件
      * 限制返回数量（比如一次只取 100 个），防止内存溢出 (OOM)
      */
-    @Query("SELECT * FROM pdf_files WHERE pages <= 0 LIMIT 100")
+    @Query("SELECT * FROM pdf_files WHERE pages <= 0")
     suspend fun getFilesWithNoPages(): List<PdfFile>
 }

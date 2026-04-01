@@ -1,5 +1,6 @@
 package com.quantumstudio.smartpdf.ui.features.main
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.getValue
@@ -36,7 +37,8 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val pdfRepository: PdfRepository,
-    private val pdfActions: PdfActions
+    private val pdfActions: PdfActions,
+    application: Application
 ) : ViewModel() {
 
     private val _pendingReaderUri = MutableStateFlow<Uri?>(null)
@@ -81,7 +83,7 @@ class MainViewModel @Inject constructor(
     // 优化后的排序逻辑：增加 debounce 机制
     @OptIn(FlowPreview::class)
     val sortedPdfFiles = combine(
-        pdfRepository.getAllPdfsFlow(), // 直接观察数据库流
+        pdfRepository.getAllPdfsFlow(application), // 直接观察数据库流
         _sortField,
         _sortOrder,
         _searchQuery.debounce(300) // 搜索防抖，避免 TCL 603 高频重组 UI
@@ -102,7 +104,7 @@ class MainViewModel @Inject constructor(
     val allPdfsFlow = snapshotFlow { hasFileAccess }
         .distinctUntilChanged()
         .flatMapLatest { granted ->
-            if (granted) pdfRepository.getAllPdfsFlow()
+            if (granted) pdfRepository.getAllPdfsFlow(application)
             else flowOf(emptyList())
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
