@@ -1,8 +1,13 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     kotlin("kapt")
     id("com.google.dagger.hilt.android")
+    alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.google.firebase.crashlytics)
 }
 
 android {
@@ -20,12 +25,44 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
+        // 读取 local.properties
+        val keystoreProperties = Properties()
+        val keystorePropertiesFile = rootProject.file("local.properties")
+        if (keystorePropertiesFile.exists()) {
+            keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+        }
+        signingConfigs {
+            create("release") {
+                keyAlias = keystoreProperties["KEY_ALIAS"] as String?
+                keyPassword = keystoreProperties["KEY_PASSWORD"] as String?
+                storeFile = file(keystoreProperties["KEY_PATH"] as String? ?: "empty")
+                storePassword = keystoreProperties["STORE_PASSWORD"] as String?
+            }
+        }
+
         release {
-            isMinifyEnabled = false
+            // 1. 开启代码混淆和压缩 (Kotlin DSL 语法)
+            isMinifyEnabled = true
+            // 2. 开启资源压缩
+            isShrinkResources = true
+            // 3. 配置混淆规则文件
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // 4. Firebase 配置
+            configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
+                nativeSymbolUploadEnabled = true
+                unstrippedNativeLibsDir =
+                    file("build/intermediates/merged_native_libs/release/out/lib")
+            }
+            // 绑定签名配置
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            // 调试模式通常关闭混淆以便快速编译和断点调试
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
     compileOptions {
@@ -40,6 +77,11 @@ android {
     }
     composeOptions {
         kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
+    }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 }
 
@@ -67,6 +109,7 @@ dependencies {
     // 2. 依赖注入 (Hilt 推荐使用 2.51.1+ 以获得最佳 API 35 支持)
     // ---------------------------------------------------------
     implementation("com.google.dagger:hilt-android:2.51.1")
+    implementation(libs.firebase.crashlytics)
     kapt("com.google.dagger:hilt-compiler:2.51.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
