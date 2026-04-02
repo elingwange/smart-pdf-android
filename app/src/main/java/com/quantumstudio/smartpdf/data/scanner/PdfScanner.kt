@@ -11,8 +11,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.yield
 import java.io.File
-import java.lang.Thread.yield
 
 object PdfScanner {
     private const val TAG = "---ELog"
@@ -35,7 +35,7 @@ object PdfScanner {
         Log.d(TAG, "MediaStore found ${validMediaStorePdfs.size} valid files")
         val count = validMediaStorePdfs.count { it.name.contains("incoming") }
         Log.d(TAG, "MediaStore found $count cache files")
-        validMediaStorePdfs.map { it.name }.forEach { Log.d(TAG, it) }
+        //validMediaStorePdfs.map { it.name }.forEach { Log.d(TAG, it) }
 
         emit(validMediaStorePdfs)
 
@@ -79,6 +79,7 @@ object PdfScanner {
                 }
             }
         }
+
 
         if (batchList.isNotEmpty()) emit(batchList)
         Log.d(TAG, "Scan completed in ${System.currentTimeMillis() - startTime}ms")

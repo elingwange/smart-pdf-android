@@ -31,17 +31,14 @@ fun AllFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
 
 @Composable
 fun FavoriteFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
-    val files by viewModel.sortedPdfFiles.collectAsState()
-    val favoriteFiles = remember(files) { files.filter { it.isFavorite } }
+    val favoriteFiles by viewModel.favoriteFiles.collectAsState()
     PdfListContent(favoriteFiles, viewModel, onFileClick)
 }
 
 @Composable
 fun RecentFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
-    val files by viewModel.allPdfsFlow.collectAsState()
-    val recentFiles = remember(files) {
-        files.filter { it.lastReadTime > 0 }.sortedByDescending { it.lastReadTime }
-    }
+    // 💡 只需要 collect，不需要 remember 和 filter
+    val recentFiles by viewModel.recentFiles.collectAsState()
     PdfListContent(recentFiles, viewModel, onFileClick)
 }
 

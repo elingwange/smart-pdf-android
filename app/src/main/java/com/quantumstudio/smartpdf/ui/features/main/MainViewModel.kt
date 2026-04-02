@@ -18,6 +18,7 @@ import com.quantumstudio.smartpdf.ui.common.PdfActions
 import com.quantumstudio.smartpdf.ui.common.RefreshPermissionObserver
 import com.quantumstudio.smartpdf.ui.common.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
@@ -29,6 +30,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -119,6 +122,21 @@ class MainViewModel @Inject constructor(
                 allFiles.filter { it.name.contains(query, ignoreCase = true) }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // 利用 Flow 组合器，在后台线程完成过滤
+    val favoriteFiles = sortedPdfFiles.map { list ->
+        list.filter { it.isFavorite }
+    }.flowOn(Dispatchers.Default) // 👈 确保计算不占用主线程
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    // 在后台线程准备好成品
+    val recentFiles = allPdfsFlow
+        .map { list ->
+            list.filter { it.lastReadTime > 0 }
+                .sortedByDescending { it.lastReadTime }
+        }
+        .flowOn(Dispatchers.Default) // 👈 关键：切换到计算线程
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun createPermissionObserver(checkPermission: () -> Boolean): DefaultLifecycleObserver {
         return RefreshPermissionObserver(

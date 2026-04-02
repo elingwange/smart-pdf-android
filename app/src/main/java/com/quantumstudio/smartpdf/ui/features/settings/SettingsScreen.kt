@@ -214,7 +214,6 @@ fun SettingRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                // 💡 建议：图标颜色可以用 primary 或者是稍微弱化一点的 onSurface
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(24.dp)
             )
