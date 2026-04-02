@@ -7,6 +7,8 @@ import android.util.Log
 import com.quantumstudio.smartpdf.data.local.PdfFileDao
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.data.scanner.PdfScanner
+import com.quantumstudio.smartpdf.util.CommonUtils
+import com.quantumstudio.smartpdf.util.FileUtils.formatFileSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -26,12 +28,17 @@ class PdfRepository(
         }
 
     // 2. 将 emergencyFilter 设为私有或保留，供内部使用
-    private fun List<PdfFile>.emergencyFilter(context: Context): List<PdfFile> {
+    private
+
+    fun List<PdfFile>.emergencyFilter(context: Context): List<PdfFile> {
         val packageName = context.packageName
         return this.filter { pdf ->
             // 这里保留你之前的逻辑
             val path = pdf.path.lowercase()
             val file = File(pdf.path)
+
+            pdf.sizeLabel = formatFileSize(pdf.size)
+            pdf.lastModifiedLabel = CommonUtils.formatDate(pdf.lastModified)
 
             // 物理存在 + 路径合法性
             val exists = file.exists() && file.length() > 0

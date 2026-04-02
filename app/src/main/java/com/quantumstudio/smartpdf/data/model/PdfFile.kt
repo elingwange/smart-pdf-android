@@ -18,7 +18,11 @@ data class PdfFile(
     val version: Int = 1,
     val currentPage: Int = 0,
     val isFavorite: Boolean = false,
-    var lastReadTime: Long = 0L // 最后读取时间（时间戳）
+    var lastReadTime: Long = 0L,
+
+    var sizeLabel: String = "",
+    var pagesLabel: String = "",
+    var lastModifiedLabel: String = ""
 ) {
     @Ignore
     constructor(

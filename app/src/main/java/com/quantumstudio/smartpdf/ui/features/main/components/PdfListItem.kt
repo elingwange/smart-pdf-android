@@ -39,8 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.quantumstudio.smartpdf.R
 import com.quantumstudio.smartpdf.data.model.PdfFile
-import com.quantumstudio.smartpdf.util.CommonUtils
-import com.quantumstudio.smartpdf.util.FileUtils
 
 @Composable
 fun PdfListItem(
@@ -101,13 +99,13 @@ fun PdfListItem(
                     Text(text = "${pdf.pages}P", style = secondaryStyle, color = secondaryColor)
                     Text(text = " • ", color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                     Text(
-                        text = FileUtils.formatFileSize(pdf.size),
+                        text = pdf.sizeLabel,
                         style = secondaryStyle,
                         color = secondaryColor
                     )
                     Text(text = " • ", color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                     Text(
-                        text = CommonUtils.formatDate(pdf.lastModified),
+                        text = pdf.lastModifiedLabel,
                         style = secondaryStyle,
                         color = secondaryColor
                     )

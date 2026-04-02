@@ -21,8 +21,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.quantumstudio.smartpdf.R
 import com.quantumstudio.smartpdf.data.model.PdfFile
-import com.quantumstudio.smartpdf.util.CommonUtils
-import com.quantumstudio.smartpdf.util.FileUtils
 
 @Composable
 fun SearchItem(
@@ -63,11 +61,7 @@ fun SearchItem(
 
             // 副标题：日期与大小 (对应截图：Feb 14, 2026 · 16.2 MB)
             Text(
-                text = "${CommonUtils.formatDate(pdf.lastModified)}  •  ${
-                    FileUtils.formatFileSize(
-                        pdf.size
-                    )
-                }",
+                text = "$pdf.lastModifiedLabel  •  $pdf.sizeLabel",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
