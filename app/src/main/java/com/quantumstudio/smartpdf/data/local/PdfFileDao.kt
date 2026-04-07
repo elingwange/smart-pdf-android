@@ -1,9 +1,12 @@
 package com.quantumstudio.smartpdf.data.local
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.RawQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import kotlinx.coroutines.flow.Flow
 
@@ -51,4 +54,21 @@ interface PdfFileDao {
      */
     @Query("SELECT * FROM pdf_files WHERE pages <= 0")
     suspend fun getFilesWithNoPages(): List<PdfFile>
+
+    //---------------------- v0.7 --------------------------
+    // 仅获取路径，极其节省内存，用于比对
+    @Query("SELECT path FROM pdf_files")
+    suspend fun getAllPaths(): List<String>
+
+    // 批量删除，用于清理失效文件
+    @Query("DELETE FROM pdf_files WHERE path IN (:paths)")
+    suspend fun deleteByPaths(paths: List<String>)
+
+    /**
+     * 核心修改：使用 RawQuery 实现动态排序
+     * observedEntities 必须指定，否则当外部扫描存入数据时，UI 不会自动刷新
+     */
+    @RawQuery(observedEntities = [PdfFile::class])
+    fun getPdfsRaw(query: SupportSQLiteQuery): PagingSource<Int, PdfFile>
+    //---------------------- v0.7 --------------------------
 }

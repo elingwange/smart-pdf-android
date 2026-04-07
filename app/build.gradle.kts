@@ -121,9 +121,22 @@ dependencies {
 
     // Room 数据库 (2.6.1 是目前的稳定版)
     val roomVersion = "2.6.1"
+    val pagingVersion = "3.2.1"
+    // --- Room 基础库 ---
     implementation("androidx.room:room-runtime:$roomVersion")
-    kapt("androidx.room:room-compiler:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
+    // 如果使用 kapt
+    kapt("androidx.room:room-compiler:$roomVersion")
+    // 如果使用 ksp，请替换为：ksp("androidx.room:room-compiler:$roomVersion")
+
+    // --- Room 适配 Paging 3 的关键桥接库 (必须添加) ---
+    // 这个库让 Room 能够生成 PagingSource 的实现类
+    implementation("androidx.room:room-paging:$roomVersion")
+
+    // --- Paging 3 核心库 ---
+    implementation("androidx.paging:paging-runtime-ktx:$pagingVersion")
+    implementation("androidx.paging:paging-compose:$pagingVersion")
+
 
     // DataStore 与 协程
     implementation(libs.androidx.datastore.preferences)
