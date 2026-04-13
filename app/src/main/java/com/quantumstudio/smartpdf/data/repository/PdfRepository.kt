@@ -3,13 +3,11 @@ package com.quantumstudio.smartpdf.data.repository
 import android.content.Context
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
-import android.util.Log
 import com.quantumstudio.smartpdf.data.local.PdfFileDao
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.data.scanner.PdfScanner
-import com.quantumstudio.smartpdf.util.CommonUtils
-import com.quantumstudio.smartpdf.util.FileUtils.formatFileSize
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -28,24 +26,24 @@ class PdfRepository(
         }
 
     // 2. 将 emergencyFilter 设为私有或保留，供内部使用
-    private
-
-    fun List<PdfFile>.emergencyFilter(context: Context): List<PdfFile> {
+    private fun List<PdfFile>.emergencyFilter(context: Context): List<PdfFile> {
         val packageName = context.packageName
         return this.filter { pdf ->
             // 这里保留你之前的逻辑
             val path = pdf.path.lowercase()
             val file = File(pdf.path)
+            // 初始化PDF元信息
+//            pdf.sizeLabel = formatFileSize(pdf.size)
+//            pdf.lastModifiedLabel = CommonUtils.formatDate(pdf.lastModified)
 
-            pdf.sizeLabel = formatFileSize(pdf.size)
-            pdf.lastModifiedLabel = CommonUtils.formatDate(pdf.lastModified)
+            true
 
-            // 物理存在 + 路径合法性
-            val exists = file.exists() && file.length() > 0
-            val isNotCache = !path.contains("/cache/") && !path.contains("/$packageName/")
-            val isNotData = !path.contains("/data/user/") && !path.contains("/android/data/")
-
-            exists && isNotCache && isNotData
+            // 检查 物理存在 + 路径合法性
+//            val exists = file.exists() && file.length() > 0
+//            val isNotCache = !path.contains("/cache/") && !path.contains("/$packageName/")
+//            val isNotData = !path.contains("/data/user/") && !path.contains("/android/data/")
+//
+//            exists && isNotCache && isNotData
         }
     }
 
@@ -57,42 +55,50 @@ class PdfRepository(
         // 这样扫描到一个，数据库存一个，UI 就能出来一个
         PdfScanner.getPdfsFlow(context).collect { batch ->
             if (batch.isNotEmpty()) {
-                Log.d("---ELog", "Insert ${batch.size} pdf files")
+                //               Log.d("---ELog", "Insert ${batch.size} pdf files")
                 pdfFileDao.insertAll(batch)
             }
         }
         // 2. 扫描物理文件完成后，再处理页数补全
         // 注意：这里不再开启新的独立 CoroutineScope，而是直接在当前作用域顺序执行
+        delay(2000)
         complementMissingPageCounts()
     }
 
-    private suspend fun complementMissingPageCounts() {
-        val missingPdfs = pdfFileDao.getFilesWithNoPages() // 建议 Dao 增加专门查 0 页的接口
-        Log.d("---ELog", "missingPdfs-> ${missingPdfs.size} files")
+    private suspend fun complementMissingPageCounts() = withContext(Dispatchers.Default) {
+        // 1. 拿到所有需要补全的任务
+        val missingPdfs = pdfFileDao.getFilesWithNoPages()
+        //       Log.d("---ELog", "有 ${missingPdfs.size} 个文件需要补全页数")
 
-        // 维度 7：性能边界。为了防止 TCL 603 瞬间打开几十个 PDF 导致 OOM
-        // 我们顺序处理，或者限制并发数为 2
-        withContext(Dispatchers.IO) {
-            missingPdfs.forEach { pdf ->
+        if (missingPdfs.isEmpty()) return@withContext
+
+//        val startTime = System.currentTimeMillis()
+//        Log.d("---ELog", "开始补全 ${missingPdfs.size} 个文件的页数")
+
+
+        // 2. 关键优化：分批处理 (Chunking)
+        // 每次处理 10 个，减轻内存峰值压力
+        missingPdfs.chunked(10).forEach { batch ->
+            batch.forEach { pdf ->
                 val file = File(pdf.path)
                 if (file.exists()) {
                     val realCount = getPdfPageCount(file)
-                    // ✨ 关键优化：只有获取到了真实页数才更新，避免死循环
-                    if (realCount > 0) {
+                    if (realCount != 0) {
                         pdfFileDao.updatePageCount(pdf.path, realCount)
                     } else {
-                        // 如果文件损坏或打不开，给它一个特殊值（如 -1），防止它一直占着 getFilesWithNoPages 的名额
                         pdfFileDao.updatePageCount(pdf.path, -1)
                     }
-                } else {
-                    // 文件不存在了，直接标记或删除
-                    pdfFileDao.deleteByPath(pdf.path)
                 }
-                yield() // 保持 UI 响应
+                // 3. ✨ 增加产出间隙，让出 CPU 给主线程
+                kotlinx.coroutines.delay(50)
             }
+            // 每组处理完后 yield，确保其他协程（如 UI 状态更新）能插队
+            yield()
         }
-    }
 
+//        val endTime = System.currentTimeMillis()
+//        Log.d("---ELog", "页数补全耗时 ${endTime - startTime} ms")
+    }
 
     // 切换收藏状态
     suspend fun toggleFavorite(path: String, isFavorite: Boolean) = withContext(Dispatchers.IO) {

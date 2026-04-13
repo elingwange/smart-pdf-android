@@ -43,6 +43,8 @@ import com.quantumstudio.smartpdf.data.model.PdfFile
 @Composable
 fun PdfListItem(
     pdf: PdfFile,
+    sizeLabel: String = "",
+    lastModifiedLabel: String = "",
     onClick: () -> Unit,
     // ✨ 修改：将 onMoreClick 改为动作回调，方便统一处理逻辑
     onMenuAction: (MenuAction) -> Unit
@@ -99,13 +101,13 @@ fun PdfListItem(
                     Text(text = "${pdf.pages}P", style = secondaryStyle, color = secondaryColor)
                     Text(text = " • ", color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                     Text(
-                        text = pdf.sizeLabel,
+                        text = sizeLabel,
                         style = secondaryStyle,
                         color = secondaryColor
                     )
                     Text(text = " • ", color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                     Text(
-                        text = pdf.lastModifiedLabel,
+                        text = lastModifiedLabel,
                         style = secondaryStyle,
                         color = secondaryColor
                     )

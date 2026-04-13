@@ -6,16 +6,13 @@ import android.provider.MediaStore
 import android.util.Log
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.yield
 import java.io.File
 
 object PdfScanner {
-    private const val TAG = "---ELog"
+    const val TAG = "---ELog"
 
     /**
      * 混合扫描入口：利用 Flow 实现响应式加载
@@ -28,8 +25,9 @@ object PdfScanner {
         // 增加 File.exists() 校验，过滤掉 MediaStore 中的“僵尸”缓存路径
         val mediaStorePdfs = scanMediaStore(context)
         val validMediaStorePdfs = mediaStorePdfs.filter {
-            val file = File(it.path)
-            file.exists() && file.length() > 0 && !it.path.contains(packageName, ignoreCase = true)
+            true
+            //    val file = File(it.path)
+            //    file.exists() && file.length() > 0 && !it.path.contains(packageName, ignoreCase = true)
         }
 
         Log.d(TAG, "MediaStore found ${validMediaStorePdfs.size} valid files")
@@ -48,37 +46,37 @@ object PdfScanner {
         val batchList = mutableListOf<PdfFile>()
         val knownPaths = validMediaStorePdfs.map { it.path }.toSet()
 
-        while (queue.isNotEmpty()) {
-            val currentDir = queue.removeFirst()
-
-            currentCoroutineContext().ensureActive()
-            yield()
-
-            val files = currentDir.listFiles() ?: continue
-            for (file in files) {
-                if (file.isDirectory) {
-                    // ✨ 核心修复：改进过滤逻辑，排除 data, cache 和私有包名目录
-                    if (!shouldSkip(file, packageName)) {
-                        queue.addLast(file)
-                    }
-                } else if (file.extension.equals("pdf", ignoreCase = true)) {
-                    val absolutePath = file.absolutePath
-                    // 只有 MediaStore 没记录的文件才通过物理扫描添加
-                    if (!knownPaths.contains(absolutePath) && !absolutePath.contains(
-                            packageName,
-                            ignoreCase = true
-                        )
-                    ) {
-                        batchList.add(file.toPdfFile())
-
-                        if (batchList.size >= 15) {
-                            emit(batchList.toList())
-                            batchList.clear()
-                        }
-                    }
-                }
-            }
-        }
+//        while (queue.isNotEmpty()) {
+//            val currentDir = queue.removeFirst()
+//
+//            currentCoroutineContext().ensureActive()
+//            yield()
+//
+//            val files = currentDir.listFiles() ?: continue
+//            for (file in files) {
+//                if (file.isDirectory) {
+//                    // ✨ 核心修复：改进过滤逻辑，排除 data, cache 和私有包名目录
+//                    if (!shouldSkip(file, packageName)) {
+//                        queue.addLast(file)
+//                    }
+//                } else if (file.extension.equals("pdf", ignoreCase = true)) {
+//                    val absolutePath = file.absolutePath
+//                    // 只有 MediaStore 没记录的文件才通过物理扫描添加
+//                    if (!knownPaths.contains(absolutePath) && !absolutePath.contains(
+//                            packageName,
+//                            ignoreCase = true
+//                        )
+//                    ) {
+//                        batchList.add(file.toPdfFile())
+//
+//                        if (batchList.size >= 15) {
+//                            emit(batchList.toList())
+//                            batchList.clear()
+//                        }
+//                    }
+//                }
+//            }
+//        }
 
 
         if (batchList.isNotEmpty()) emit(batchList)
@@ -88,7 +86,7 @@ object PdfScanner {
     /**
      * 利用 ContentResolver 查询 MediaStore 索引
      */
-    private fun scanMediaStore(context: Context): List<PdfFile> {
+    fun scanMediaStore(context: Context): List<PdfFile> {
         val pdfs = mutableListOf<PdfFile>()
         val collection = MediaStore.Files.getContentUri("external")
         val projection = arrayOf(

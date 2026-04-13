@@ -44,6 +44,25 @@ class MainViewModel @Inject constructor(
     application: Application
 ) : ViewModel() {
 
+    var isRefreshing by mutableStateOf(false)
+        private set
+
+    fun refresh() {
+        if (isRefreshing) return // 防止连续重复触发
+
+        viewModelScope.launch {
+            isRefreshing = true
+
+            // 模拟 1 秒钟的数据加载/刷新过程
+            kotlinx.coroutines.delay(800)
+
+            // 这里如果你想顺便做一下轻量同步，可以放这里
+            // pdfRepository.syncPdfFiles(context)
+
+            isRefreshing = false
+        }
+    }
+
     private val _pendingReaderUri = MutableStateFlow<Uri?>(null)
     val pendingReaderUri = _pendingReaderUri.asStateFlow()
 

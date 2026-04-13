@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -19,7 +21,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import com.quantumstudio.smartpdf.ui.features.main.MainViewModel
+import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
+import com.quantumstudio.smartpdf.util.FileUtils.formatFileSize
 import java.io.File
 
 
@@ -37,12 +41,12 @@ fun FavoriteFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
 
 @Composable
 fun RecentFilesTab(viewModel: MainViewModel, onFileClick: (Uri) -> Unit) {
-    // 💡 只需要 collect，不需要 remember 和 filter
     val recentFiles by viewModel.recentFiles.collectAsState()
     PdfListContent(recentFiles, viewModel, onFileClick)
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PdfListContent(
     files: List<PdfFile>,
@@ -54,56 +58,71 @@ fun PdfListContent(
     var pdfToDelete by remember { mutableStateOf<PdfFile?>(null) }
     var pdfToRename by remember { mutableStateOf<PdfFile?>(null) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (files.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No PDF files found", color = Color.Gray)
-            }
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(items = files, key = { it.path }) { pdf ->
-                    PdfListItem(
-                        pdf = pdf,
-                        onClick = { onFileClick(Uri.fromFile(File(pdf.path))) },
-                        onMenuAction = { action ->
-                            when (action) {
-                                is MenuAction.Info -> selectedPdfForInfo = pdf
-                                is MenuAction.Favorite -> viewModel.toggleFavorite(pdf)
-                                is MenuAction.Rename -> pdfToRename = pdf
-                                is MenuAction.Delete -> pdfToDelete = pdf
-                                is MenuAction.Share -> sharePdf(context, pdf)
-                                else -> {}
-                            }
+    PullToRefreshBox(
+        isRefreshing = viewModel.isRefreshing, // 绑定刷新状态
+        onRefresh = { viewModel.refresh() },    // 下拉释放时触发的方法
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (files.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No PDF files found", color = Color.Gray)
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(items = files, key = { it.path }) { pdf ->
+                        pdf.let {
+                            // 在这里进行格式化，只有显示在屏幕上的 Item 才会计算
+                            val sizeLabel = remember(it.size) { formatFileSize(it.size) }
+                            val lastModifiedLabel =
+                                remember(it.lastModified) { CommonUtils.formatDate(it.lastModified) }
+
+                            PdfListItem(
+                                pdf = pdf,
+                                sizeLabel,
+                                lastModifiedLabel,
+                                onClick = { onFileClick(Uri.fromFile(File(pdf.path))) },
+                                onMenuAction = { action ->
+                                    when (action) {
+                                        is MenuAction.Info -> selectedPdfForInfo = pdf
+                                        is MenuAction.Favorite -> viewModel.toggleFavorite(pdf)
+                                        is MenuAction.Rename -> pdfToRename = pdf
+                                        is MenuAction.Delete -> pdfToDelete = pdf
+                                        is MenuAction.Share -> sharePdf(context, pdf)
+                                        else -> {}
+                                    }
+                                }
+                            )
                         }
-                    )
+                    }
                 }
             }
-        }
 
-        selectedPdfForInfo?.let { pdf ->
-            PdfInfoDialog(pdf = pdf, onDismiss = { selectedPdfForInfo = null })
-        }
+            selectedPdfForInfo?.let { pdf ->
+                PdfInfoDialog(pdf = pdf, onDismiss = { selectedPdfForInfo = null })
+            }
 
-        pdfToDelete?.let { pdf ->
-            PdfDeleteDialog(
-                fileName = pdf.name,
-                onDismiss = { pdfToDelete = null },
-                onConfirm = {
-                    viewModel.deleteFile(pdf)
-                    pdfToDelete = null
-                }
-            )
-        }
+            pdfToDelete?.let { pdf ->
+                PdfDeleteDialog(
+                    fileName = pdf.name,
+                    onDismiss = { pdfToDelete = null },
+                    onConfirm = {
+                        viewModel.deleteFile(pdf)
+                        pdfToDelete = null
+                    }
+                )
+            }
 
-        pdfToRename?.let { pdf ->
-            PdfRenameDialog(
-                currentName = pdf.name,
-                onDismiss = { pdfToRename = null },
-                onConfirm = { newName ->
-                    viewModel.renameFile(pdf, newName)
-                    pdfToRename = null
-                }
-            )
+            pdfToRename?.let { pdf ->
+                PdfRenameDialog(
+                    currentName = pdf.name,
+                    onDismiss = { pdfToRename = null },
+                    onConfirm = { newName ->
+                        viewModel.renameFile(pdf, newName)
+                        pdfToRename = null
+                    }
+                )
+            }
         }
     }
 }
