@@ -26,6 +26,7 @@ import com.quantumstudio.smartpdf.ui.features.reader.components.PdfScrollbarThum
 import com.quantumstudio.smartpdf.ui.features.reader.components.ReaderTopBar
 import com.quantumstudio.smartpdf.util.CommonUtils
 import com.quantumstudio.smartpdf.util.CommonUtils.sharePdf
+import com.quantumstudio.smartpdf.util.CommonUtils.uriToFile
 import com.quantumstudio.smartpdf.util.ShortcutUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.yield
@@ -55,6 +56,20 @@ fun PdfReaderScreen(
         // 先解码，还原回原始 content://... 格式
         val decodedSource = Uri.decode(uriString)
         viewModel.loadPdf(decodedSource)
+    }
+
+
+    // 监听打印信号
+    LaunchedEffect(uiState.isPrinting) {
+        if (uiState.isPrinting) {
+            val file = uriToFile(context, uri)
+            // 调用系统打印
+            CommonUtils.printPdf(context, file, currentPdf?.name)
+
+            // 💡 关键：调起系统打印界面后，立刻把状态重置回 false
+            // 否则下次重组或恢复状态时可能会重复调起打印
+            uiState.isPrinting = false
+        }
     }
 
     // 3. 处理系统级副作用：返回键与亮度
@@ -166,39 +181,50 @@ private fun PdfContentLayer(
             factory = { ctx ->
                 PDFView(ctx, null).apply {
                     setOnClickListener { uiState.toggleUi() }
-                    // ✨ 关键修复 1：在 factory 中就建立引用，确保实例稳定
                     pdfState.pdfView = this
+
+                    // 第一次加载
+                    fromFile(file)
+                        .nightMode(uiState.isNightMode)
+                        .defaultPage(currentPdf.currentPage)
+                        .fitEachPage(true) // 关键：开启单页自适应
+                        .pageFling(true)
+                        .onPageChange { p, c -> pdfState.updatePage(p, c) }
+                        .onPageScroll { p, o -> pdfState.updateScroll(p, o) }
+                        .onLoad {
+                            pdfState.isFirstLoad = false
+                            pdfState.lastLoadedFilePath = file.absolutePath
+                        }
+                        .load()
                 }
             },
             update = { pdfView ->
-                // ✨ 关键修复 2：显式读取状态，确保 update 块订阅了这些变量的变化
-                val nightMode = uiState.isNightMode
-                val currentFilePath = file.absolutePath
-
-                if (pdfState.lastLoadedFilePath != currentFilePath) {
-                    // 首次加载或文件切换
-                    pdfView.fromFile(file)
-                        .nightMode(nightMode)
-                        .defaultPage(currentPdf.currentPage)
-                        .fitEachPage(true)
-                        .pageFling(true)
-                        .onPageChange { p, c -> pdfState.updatePage(p, c) }
-                        // ✨ 关键修复 3：补回丢失的滑动监听，否则 scrollProgress 永远是 0，指示器不走
-                        .onPageScroll { page, offset ->
-                            pdfState.updateScroll(page, offset)
-                        }
-                        .onLoad {
-                            pdfState.isFirstLoad = false
-                            pdfState.lastLoadedFilePath = currentFilePath
-                            pdfView.zoomTo(1f)
-                        }
-                        .load()
-                } else {
-                    // ✨ 关键修复 4：解决切换主题不即时生效的问题
-                    // PDFView 内部对 nightMode 的修改有时需要重新加载或强制刷新
-                    pdfView.setNightMode(nightMode)
-                    // 强制 PDFView 重绘滤镜层
+                // 1. 处理夜间模式
+                if (pdfView.isNightMode != uiState.isNightMode) {
+                    pdfView.setNightMode(uiState.isNightMode)
                     pdfView.invalidate()
+                }
+
+                // 2. 修复旋转后的缩放 Bug
+                if (pdfState.lastLoadedFilePath == null) {
+                    // ✨ 关键防御代码：检查 PDFView 内部的页面数量是否大于 0
+                    // 如果 pageCount 为 0，说明 PdfFile 对象还是 null，此时调用 zoom 会崩溃
+                    if (pdfView.pageCount > 0) {
+                        // 使用非动画版的 zoom，避免触发 AnimationManager
+                        pdfView.zoomTo(1f)
+
+                        // 如果非要用带动画的重置，先确保 view 已经绘制
+                        pdfView.post {
+                            try {
+                                if (pdfView.pageCount > 0) {
+                                    pdfView.resetZoomWithAnimation()
+                                }
+                            } catch (e: Exception) {
+                                // 防御性捕获，防止极速旋转导致的意外
+                            }
+                        }
+                        pdfState.lastLoadedFilePath = file.absolutePath
+                    }
                 }
             }
         )
@@ -237,6 +263,7 @@ private fun PdfContentLayer(
                 title = currentPdf.name, // 使用数据库里的名字更准确
                 onBack = onBack,
                 onInfoClick = { uiState.showInfoDialog = true },
+                onPrintClick = { uiState.isPrinting = true },
                 onAddToHomeClick = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         ShortcutUtils.addPdfToHomeScreen(context, currentPdf)

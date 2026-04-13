@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddHome
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -32,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 // ui/features/viewer/components/ReaderTopBar.kt
 @Composable
@@ -40,6 +43,7 @@ fun ReaderTopBar(
     title: String,
     onBack: () -> Unit,
     onInfoClick: () -> Unit,
+    onPrintClick: () -> Unit,
     onAddToHomeClick: () -> Unit,
     onShareClick: () -> Unit
 ) {
@@ -80,27 +84,71 @@ fun ReaderTopBar(
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Info") },
-                            leadingIcon = { Icon(Icons.Default.Info, null) },
+                            text = {
+                                Text(
+                                    "Info", fontSize = 16.sp,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Info, null, Modifier.size(24.dp)
+                                )
+                            },
                             onClick = {
                                 showMenu = false
                                 onInfoClick()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Add to Home Screen") },
-                            leadingIcon = { Icon(Icons.Default.AddHome, null) },
+                            text = {
+                                Text(
+                                    "Print", fontSize = 16.sp,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Print, null, Modifier.size(24.dp)
+                                )
+                            },
                             onClick = {
                                 showMenu = false
-                                onAddToHomeClick()
+                                onPrintClick()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Share") },
-                            leadingIcon = { Icon(Icons.Default.Share, null) },
+                            text = {
+                                Text(
+                                    "Share", fontSize = 16.sp,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Share, null, Modifier.size(24.dp)
+                                )
+                            },
                             onClick = {
                                 showMenu = false
                                 onShareClick()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Add to Home Screen", fontSize = 16.sp,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.AddHome, null, Modifier.size(24.dp)
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                onAddToHomeClick()
                             }
                         )
                     }

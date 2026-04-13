@@ -10,7 +10,10 @@ import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.quantumstudio.smartpdf.R
 import com.quantumstudio.smartpdf.data.model.PdfFile
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -193,5 +196,81 @@ object CommonUtils {
         val intent =
             Intent(Intent.ACTION_VIEW, Uri.parse("https://sites.google.com/view/smart-pdf-mate/"))
         context.startActivity(intent)
+    }
+
+    fun printPdf(context: Context, file: File?, name: String?) {
+        val printManager =
+            context.getSystemService(Context.PRINT_SERVICE) as? android.print.PrintManager
+        val jobName = "${context.getString(R.string.app_name)} - $name"
+
+        // 使用系统内置的 PrintDocumentAdapter 发送文件流
+        printManager?.print(
+            jobName,
+            object : android.print.PrintDocumentAdapter() {
+                override fun onWrite(
+                    pages: Array<out android.print.PageRange>?,
+                    destination: android.os.ParcelFileDescriptor?,
+                    cancellationSignal: android.os.CancellationSignal?,
+                    callback: WriteResultCallback?
+                ) {
+                    try {
+                        val input = java.io.FileInputStream(file)
+                        val output = java.io.FileOutputStream(destination?.fileDescriptor)
+                        input.copyTo(output)
+                        callback?.onWriteFinished(arrayOf(android.print.PageRange.ALL_PAGES))
+                    } catch (e: Exception) {
+                        callback?.onWriteFailed(e.message)
+                    }
+                }
+
+                override fun onLayout(
+                    oldAttributes: android.print.PrintAttributes?,
+                    newAttributes: android.print.PrintAttributes?,
+                    cancellationSignal: android.os.CancellationSignal?,
+                    callback: LayoutResultCallback?,
+                    extras: android.os.Bundle?
+                ) {
+                    if (cancellationSignal?.isCanceled == true) {
+                        callback?.onLayoutCancelled()
+                        return
+                    }
+                    // 告诉系统 PDF 已准备好
+                    if (name != null) {
+                        val pdi = android.print.PrintDocumentInfo.Builder(name)
+                            .setContentType(android.print.PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
+                            .build()
+                        callback?.onLayoutFinished(pdi, true)
+                    }
+                }
+            },
+            null
+        )
+    }
+
+    fun uriToFile(context: Context, uri: Uri): File? {
+        // 1. 如果是 file:// 协议，直接获取路径
+        if (uri.scheme == "file") {
+            return uri.path?.let { File(it) }
+        }
+
+        // 2. 如果是 content:// 协议（如从文件管理器选择的）
+        return try {
+            val contentResolver = context.contentResolver
+            // 获取文件名（可选，用于保持临时文件后缀一致）
+            val fileName = "temp_pdf_${System.currentTimeMillis()}.pdf"
+
+            // 创建缓存文件
+            val tempFile = File(context.cacheDir, fileName)
+
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                FileOutputStream(tempFile).use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            tempFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 }

@@ -27,6 +27,8 @@ class ReaderUiState(
 ) {
     var pdfLoadStatus by mutableStateOf<PdfLoadStatus>(PdfLoadStatus.Idle)
 
+    var isPrinting by mutableStateOf(false)
+
     var isUiVisible by mutableStateOf(initialIsUiVisible)
         private set
 
@@ -111,7 +113,8 @@ class ReaderUiState(
                     it.isUiVisible,
                     it.isNightMode,
                     it.activePanel.name,
-                    it.currentBrightness
+                    it.currentBrightness,
+                    it.isPrinting
                 )
             },
             restore = { savedList ->
@@ -126,6 +129,9 @@ class ReaderUiState(
                     // 2. 恢复亮度值
                     val savedBrightness = list[3] as Float
                     updateBrightness(savedBrightness)
+
+                    // 4. 恢复打印状态
+                    isPrinting = list[4] as Boolean
                 }
             }
         )
