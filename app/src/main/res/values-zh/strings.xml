@@ -14,4 +14,10 @@
     <string name="version">版本</string>
     <string name="theme_mode">主题</string>
     <string name="language">语言</string>
+
+    <string name="pdf_page_count">%1$d页</string>
+
+    <string name="permission_title">需要文件访问权限</string>
+    <string name="permission_content">为了能够扫描并阅读您手机中的 PDF 文件，Smart PDF 需要获得“所有文件访问”权限。这仅用于文件管理功能。</string>
+    <string name="permission_allow">去授权</string>
 </resources>

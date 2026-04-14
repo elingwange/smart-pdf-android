@@ -14,9 +14,7 @@ import com.quantumstudio.smartpdf.R
 import com.quantumstudio.smartpdf.data.model.PdfFile
 import java.io.File
 import java.io.FileOutputStream
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.text.DateFormat
 
 object CommonUtils {
     /**
@@ -33,10 +31,12 @@ object CommonUtils {
         }
     }
 
-    // 格式化日期：2026年1月25日
+    // 格式化日期：根据设备当前的 Locale（如 en_US 或 zh_CN）自动排版
+    // 美国显示: Apr 14, 2026
+    // 中国显示: 2026年4月14日
     fun formatDate(timestamp: Long): String {
-        val sdf = SimpleDateFormat("yyyy年M月d日", Locale.CHINESE)
-        return sdf.format(Date(timestamp))
+        val label = DateFormat.getDateInstance(DateFormat.MEDIUM).format(timestamp)
+        return label
     }
 
     fun formatTimestamp(timestamp: Long): String {

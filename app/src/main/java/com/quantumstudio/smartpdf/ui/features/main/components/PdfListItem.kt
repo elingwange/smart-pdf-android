@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.quantumstudio.smartpdf.R
@@ -98,7 +99,11 @@ fun PdfListItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val secondaryStyle = MaterialTheme.typography.bodySmall
                     val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    Text(text = "${pdf.pages}P", style = secondaryStyle, color = secondaryColor)
+                    Text(
+                        text = stringResource(id = R.string.pdf_page_count, pdf.pages),
+                        style = secondaryStyle,
+                        color = secondaryColor
+                    )
                     Text(text = " • ", color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                     Text(
                         text = sizeLabel,

@@ -14,4 +14,10 @@
     <string name="version">Version</string>
     <string name="theme_mode">Theme Mode</string>
     <string name="language">Language</string>
+
+    <string name="pdf_page_count">%1$dP</string>
+
+    <string name="permission_title">Need File Access Permission</string>
+    <string name="permission_content">To scan and display all PDF files on your device, Smart PDF needs \'All Files Access\' permission. This is used exclusively for document management and offline reading."</string>
+    <string name="permission_allow">Allow Access</string>
 </resources>

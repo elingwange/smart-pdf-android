@@ -22,10 +22,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.quantumstudio.smartpdf.R
 
 @Composable
 fun PermissionGuideScreen(onGrantClick: () -> Unit) {
@@ -56,7 +58,7 @@ fun PermissionGuideScreen(onGrantClick: () -> Unit) {
 
         // 标题
         Text(
-            text = "需要文件访问权限",
+            text = stringResource(R.string.permission_title),
             color = Color.White,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold
@@ -66,7 +68,7 @@ fun PermissionGuideScreen(onGrantClick: () -> Unit) {
 
         // 描述文字
         Text(
-            text = "为了能够扫描并阅读您手机中的 PDF 文件，Smart PDF 需要获得“所有文件访问”权限。这仅用于文件管理功能。",
+            text = stringResource(R.string.permission_content),
             color = Color.Gray,
             fontSize = 14.sp,
             textAlign = TextAlign.Center,
@@ -84,7 +86,12 @@ fun PermissionGuideScreen(onGrantClick: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text("去授权", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = stringResource(R.string.permission_allow),
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
